@@ -1,0 +1,95 @@
+///: ignore
+
+
+class Perf {
+
+    volatile int a0  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a1  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a2  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a3  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a4  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a5  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a6  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a7  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a8  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a9  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a10  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a11  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a12  moves_as isLocal(this) ? threadlocal : guarded_by this;
+    volatile int a13  moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+    invariant this.a0 > 0;
+    invariant this.a1 > 0;
+    invariant this.a2 > 0;
+    invariant this.a3 > 0;
+    invariant this.a4 > 0;
+    invariant this.a5 > 0;
+    invariant this.a6 > 0;
+    invariant this.a7 > 0;
+    invariant this.a8 > 0;
+    invariant this.a9 > 0;
+    invariant this.a10 > 0;
+    invariant this.a11 > 0;
+    invariant this.a12 > 0;
+    invariant this.a13 > 0;
+
+   public void f0() {
+   }
+
+   public void f1() {
+      yield;
+    }
+    public void f2() {
+          yield;
+          yield;
+        }
+    public void f3() {
+          yield;
+          yield;
+          yield;
+        }
+    public void f4() {
+          yield;
+          yield;
+          yield;
+          yield;
+        }
+    public void f5() {
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+        }
+        /*
+    public void f6() {
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+        }
+    public void f7() {
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+        }
+
+
+    public void f8() {
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+          yield;
+        }
+        */
+}

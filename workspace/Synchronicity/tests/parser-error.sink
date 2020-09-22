@@ -1,0 +1,5 @@
+// OK
+
+class Node {
+    int x whenever;
+}

@@ -1,0 +1,19 @@
+// OK
+
+class Cow {
+	int x 	guarded_by this.y;
+	Cow y   readonly;
+
+	invariant  this.y != Cow.null;
+	
+	public void f() {
+
+		int xx = 0;
+		Cow y := this.y;
+		yield;
+		synchronized(y) {
+			this.x := xx;
+		}
+	}
+}
+

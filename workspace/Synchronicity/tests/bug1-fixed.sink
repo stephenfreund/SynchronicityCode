@@ -1,0 +1,16 @@
+
+
+class Mutex {
+	int m     isRead ? (this.m == tid ? B : E)
+	                 : (this.m == tid && newValue == Tid.null ? L :
+	                      (this.m == Tid.null && newValue == tid ? R : E)) ! ;
+}
+
+
+class Test {
+    Mutex m  B#E;
+    int x    this.m.m == tid ? B:E;
+
+    invariant this.m != Mutex.null;
+
+}

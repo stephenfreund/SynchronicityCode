@@ -1,0 +1,18 @@
+#!/bin/bash
+
+export ANCHOR_HOME=`pwd`
+
+export PATH=${ANCHOR_HOME}/commands:${PATH}:${ANCHOR_HOME}/boogie/Binaries/
+
+alias z3=${ANCHOR_HOME}/boogie/Binaries/z3.exe
+
+echo "Anchor Configuration"
+echo "--------------------"
+echo "ANCHOR_HOME = ${ANCHOR_HOME}"
+echo ""
+echo "Commands"
+echo "--------"
+echo "anchor             -> `which anchor`"
+echo "anchor-benchmarks  -> `which anchor-benchmarks`"
+echo "compile-benchmarks -> `which compile-benchmarks`"
+echo ""

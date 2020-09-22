@@ -1,0 +1,50 @@
+
+class Cow {
+	int x 	holds(this) ?
+	          (isRead ? B
+	                  : (newValue > this.x ? R : E))
+	        : E
+	        yields_as newValue >= this.x;
+
+	public void f() {
+        synchronized(this) {
+          int v := this.x;
+          if (v < 10) {
+            this.x := 10;
+          }
+        }
+        yield;
+        synchronized(this) { int this_x := this.x; assert this_x >= 10; }
+    }
+}
+
+class Cow2 {
+	int x 	holds(this) ?
+	          (isRead ? B
+	                  : (newValue > this.x ? R : E))
+	        : E
+	        yields_as newValue > this.x;
+}
+
+class Cow3 {
+	int x 	holds(this) ?
+	          (isRead ? B
+	                  : (newValue > this.x ? R : E))
+	        : E
+	        yields_as newValue == this.x + 1;
+}
+
+class Cow4 {
+	int x 	holds(this) ?
+	          (isRead ? B
+	                  : (newValue == this.x + 1 ? R : E))
+	        : E
+	        yields_as newValue == this.x + 1;
+}
+
+///: (26.29): yields_as clause for Cow2.x is not reflexive
+///: (34.29): yields_as clause for Cow3.x is not reflexive
+///: (34.29): yields_as clause for Cow3.x is not transitive
+///: (34.29): yields_as clause for Cow3.x is not valid
+///: (42.29): yields_as clause for Cow4.x is not reflexive
+///: (42.29): yields_as clause for Cow4.x is not transitive

@@ -1,0 +1,57 @@
+
+class Object { }
+
+class LockState {
+    array VC_LockState = int[moves_as  guarded_by this.target]
+
+    array VC_Local = int[moves_as isRead() ? B : E]
+
+    Object target moves_as isLocal(this) ? threadlocal : readonly;
+
+  [VC_LockState] vc moves_as isLocal(this) ? threadlocal : guarded_by this.target;
+
+   public void copy(ThreadState st) {
+    [VC_LockState] oldVCPtr = this.vc;
+
+    [VC_Local] o = new [VC_Local](st.vc.length);  // spec
+        assume (forall int k :: o[k] == st.vc[k]);   // spec
+
+        for (int j = 0; j < 100; j = j + 1)
+            invariant 0 <= j && j <= this.vc.length;    // spec
+        invariant (forall int i :: 0 <= i && i < j && i < this.vc.length ==> (this.vc[i] == (( i < st.vc.length) ? st.vc[ i] : ( i))));  // spec
+        invariant (forall int i :: st.vc[i] == o[i]);  // spec
+        invariant this.vc == oldVCPtr || isFresh(this.vc);  // spec
+        {
+            this.vc[j] = 0;
+        }
+    }
+}
+
+class ThreadState {
+
+    array VC_ThreadState = int[moves_as
+    isLocal(this) ? threadlocal
+                    : this.stopped ? (isRead() ? B : E)
+            : (tid == this.t ? B:E)]
+
+    array VC_Local = int[moves_as isRead() ? B : E]
+
+    volatile bool stopped moves_as
+    isLocal(this) ? threadlocal :
+    isRead() ? (tid == this.t ? B : (this.stopped ? R : N))
+            : (tid == this.t && !this.stopped && newValue ? N : E);
+
+    Tid t     moves_as  isLocal(this) ? threadlocal : readonly;
+
+    invariant 0 <= this.t && this.t < 256;
+
+    volatile [VC_ThreadState] vc  moves_as
+    isLocal(this) ? threadlocal
+                    : this.stopped ? isRead() ? B : E
+                                   : (tid == this.t ? B:E);
+
+
+}
+
+
+///: (14.5): Reduction failure

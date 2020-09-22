@@ -1,0 +1,7 @@
+
+class A {
+    volatile bool x moves_as isLocal(this) >>> B;
+    volatile bool y moves_as isLocal(this) >>> isRead() >>> B;
+    volatile bool z moves_as isLocal(this) ? isRead() >>> B : L;
+    // parser error volatile bool zz moves_as isLocal(this) >>> isRead() ? B : L;
+}

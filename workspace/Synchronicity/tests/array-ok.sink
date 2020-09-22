@@ -1,0 +1,12 @@
+
+class Cow {
+
+    array T = int[index == tid ? B#B:E#E]
+
+    [T{this}] a whenever;
+
+    public void f() {
+       [T{this}] a := this.a;
+    }
+}
+

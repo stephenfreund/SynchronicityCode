@@ -1,0 +1,155 @@
+///: ignore
+
+//
+//
+//class AtomicInt {
+//
+//	int x     isLocal(this) ? B : ((this.xnw == tid ? R : N)
+//	           # (this.xnw == tid ? N : E));
+//
+//
+//    // Is tid the next writer?
+//	Tid xnw      E;
+//
+//
+//    int get() {
+//        if (isShared(this)) {
+//            bool test;
+//            // possibly become the next writer
+//            havoc test;
+//            if (test) {
+//                # AtomicInt.xnw[this.z] := tid;
+//            }
+//        }
+//        # assert _pc == PreCommit;
+//
+//        int result := this.x;
+//        return result;
+//    }
+//
+//
+//    bool set(int o, int v) {
+//        if (!isShared(this)) {
+//            int current := this.x;
+//            if (o == current) {
+//                this.x := v;
+//                return true;
+//            } else {
+//                return false;
+//            }
+//        } else {
+//            bool isNextWriter;
+//            assume isNextWriter == (this.xnw == tid);
+//            if (isNextWriter) {
+//                int current := this.x;
+//                if (o == current) {
+//                    this.x := v;
+//                    Tid n = Tid.null;
+//                    this.xnw := n;
+//                    return true;
+//                }
+//            }
+//            return false;
+//         }
+//    }
+//}
+//
+//
+//class C {
+//    AtomicInt z readonly;
+//
+//    public void f() {
+//        AtomicInt z := this.z;
+//        assume z != AtomicInt.null;
+//        # assert _pc == PreCommit;
+//        int w = z.get();
+//    }
+//
+//        public void wwww(int v) {
+//            AtomicInt z := this.z;
+//            assume z != AtomicInt.null;
+//            # assert _pc == PreCommit;
+//            assume z.xnw != tid;
+//            int x = z.get();
+//            assert z.xnw != tid;
+//        }
+//}
+//
+//
+///*
+//
+//
+//    public void g(int v) {
+//        AtomicInt z := this.z;
+//        assume z != AtomicInt.null;
+//        # assert _pc == PreCommit;
+//        assume z.xnw != tid;
+//        while (true)
+//            invariant z.xnw != tid;
+//            invariant isShared(z);
+//        {
+//            int x = z.get();
+//                        assert z.xnw != tid;
+//
+//            yield;
+//            bool w = z.set(0, v);
+//            if (w) {
+//                assert z.xnw != tid;
+//                break;
+//            }
+//            assert z.xnw != tid;
+//            yield;
+//        }
+//    }
+//
+//	public void f(int v) {
+//	    assume this.xnw != tid;  // never committed to write at entry
+//
+//        while (true)
+//            invariant this.xnw != tid;   // never committed to write at top of loops
+//
+//        {
+//            bool test;
+//
+//            // possibly become the next writer
+//            havoc test;
+//            if (test) {
+//                assume this.xnw == Tid.null;
+//                this.xnw := tid;
+//            }
+//
+//            int temp := this.x;   // R if we are next writer.  N if we are not.
+//
+//            yield;
+//
+//            bool success;  // did CAS succeed
+//
+//            bool random;   // pick whether we were successful in becoming the next writer.
+//            if (random) {
+//
+//                assume this.xnw == tid;   // assume we are
+//                assert temp == this.x;    // assert this.x hasn't changed
+//
+//                this.x := v;              // do update
+//
+//                Tid tnull = Tid.null;     // set new writer to null
+//                this.xnw := tnull;
+//
+//                success = true;
+//
+//                break;
+//
+//            } else {
+//                assume this.xnw != tid;   // assume we're not the next writer
+//                int dummy := this.x;      // need non-mover read here.
+//                success = false;
+//            }
+//
+//            yield;
+//
+//        }
+//
+//	    assert this.xnw != tid;   // must have no commitment to write.
+//	}
+//	*/
+//

@@ -1,0 +1,24 @@
+
+       \documentclass{article}
+       \usepackage{booktabs}
+       \begin{document}
+       \begin{tabular}{llccccr}
+       & & \multicolumn{1}{c}{Size}  & \multicolumn{1}{c}{Sync.} & & \multicolumn{1}{c}{Requires and}  & \multicolumn{1}{c}{Anchor}  \\
+        \multicolumn{2}{l}{Program} & \multicolumn{1}{c}{(LOC)}  & \multicolumn{1}{c}{Specs} & \multicolumn{1}{c}{Yields} &  \multicolumn{1}{c}{Invariants} & \multicolumn{1}{c}{Time (s)} \\
+        \toprule
+      
+\multicolumn{7}{l}{\bf Stacks}\\
+ &  Coarse  &  42  &  3  &  1  &  0  &  3.34 \\   %  3.1, 3.08, 3.48, 3.4, 3.35, 3.19, 3.34, 3.58, 3.48, 3.38
+ &  Lock-free  &  50  &  3  &  4  &  3  &  3.77 \\   %  3.69, 3.7, 3.66, 3.81, 3.73, 3.78, 3.79, 3.85, 3.88, 3.84
+\multicolumn{7}{l}{\bf Linked Lists}\\
+ &  Coarse  &  111  &  4  &  0  &  26  &  4.28 \\   %  4.97, 4.62, 4.19, 4.16, 4.15, 4.11, 4.12, 4.11, 4.14, 4.26
+ &  Fine~  &  176  &  4  &  6  &  28  &  3.84 \\   %  3.82, 4.06, 4.19, 3.82, 3.74, 3.67, 3.68, 3.71, 3.74, 3.92
+~\\[-1ex]
+ &  Queue  &  63  &  4  &  2  &  5  &  13.02 \\   %  12.85, 12.83, 13.21, 13.03, 12.89, 13.04, 13.24, 13.14, 12.87, 13.08
+~\\[-1ex]
+ \multicolumn{2}{l}{\bf FastTrack}  &  390  &  9  &  2  &  67  &  39.58 \\   %  41.47, 39.51, 39.29, 39.23, 39.38, 39.73, 39.19, 39.0, 39.28, 39.75
+
+\bottomrule
+\end{tabular}
+\end{document}
+      

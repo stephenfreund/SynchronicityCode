@@ -1,0 +1,2 @@
+cpp -C -E -W -P queue-with-macros.anchor > ../specs/queue.anchor
+acc ../specs/queue.anchor

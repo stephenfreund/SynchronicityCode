@@ -1,0 +1,46 @@
+
+
+class Pair {
+    int key moves_as isLocal(this) ? B : readonly;
+    int value moves_as isLocal(this) ? B : readonly;
+    public Pair(int key, int value) {
+        this.key = key; this.value = value;
+    }
+}
+
+class Queue {
+
+    [Pair] elems;
+
+    volatile int tail;
+
+    volatile int head;
+
+    public Vector() {
+      // spec, head, tail all zero/empty initialized
+      this.elems = new [T](512);
+    }
+
+    public bool enqueue(Pair x) {
+      if ( (this.tail + 1) % SIZE != this.head ) {
+        this.elems[this.tail] = x;
+        this.spec = this.spec ++ [x];
+        this.tail = (this.tail + 1) % SIZE;
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+
+    public Pair dequeue() {
+        if (this.head != this.tail) {
+            Pair result = this.elems[this.head];
+            this.spec = this.spec[1..SeqLen(this.spec)];
+            this.head = (this.head + 1) % SIZE;
+            return result;
+        } else {
+            return null;
+        }
+    }
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$/../.." vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/boogie" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/boogie-crap" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/boogie-safe" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/z3-old" vcs="Git" />
+  </component>
+</project>

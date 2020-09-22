@@ -1,0 +1,44 @@
+class Node {
+  int item  moves_as isLocal(this) ? threadlocal : readonly;
+  Node next moves_as isLocal(this) ? threadlocal : readonly;
+
+  Node(int item, Node next) {
+    this.item = item;
+    this.next = next;
+  }
+}
+
+class Stack {
+
+  volatile Node head moves_as isLocal(this) ? B : guarded_by this;
+
+  public void push(int item) {
+    acquire(this);
+    Node node = new Node(item, this.head);
+    this.head = node;
+    release(this);
+  }
+
+  public int pop() {
+    while (true) {
+      acquire(this);
+      if (this.head != null) {
+        break;
+      }
+      release(this);
+      yield;
+    }
+    int value = this.head.item;
+    this.head = this.head.next;
+    release(this);
+    return value;
+  }
+
+  public void buggy() {
+    this.push(10);
+    acquire(this);
+    assert this.head.item == 10;
+    release(this);
+  }
+}
+

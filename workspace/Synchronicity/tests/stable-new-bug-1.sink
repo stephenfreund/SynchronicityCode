@@ -1,0 +1,10 @@
+///: ignore
+
+class Cow {
+
+	int m     N // not strong enough to ensure right-mover reads...
+               # ((casOK(this.m) && ((this.m == -1 && newValue == tid) ||
+                                         (this.m == tid && newValue == -1))) ? N : E );
+
+}
+

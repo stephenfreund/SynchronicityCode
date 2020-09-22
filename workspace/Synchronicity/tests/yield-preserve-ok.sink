@@ -1,0 +1,15 @@
+// OK
+
+class Cow {
+	int x 	guarded_by this;  
+	public void f() {
+		int xx = 0;
+		int yy;
+		synchronized(this) {
+			this.x := xx;
+			yield;
+			yy := this.x;
+			assert xx == yy;
+		}
+	}
+}

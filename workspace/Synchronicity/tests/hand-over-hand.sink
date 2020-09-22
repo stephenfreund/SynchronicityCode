@@ -1,0 +1,37 @@
+
+class Node {
+
+    int item isLocal(this) ? threadlocal : readonly;
+    Node next isLocal(this) ? threadlocal : guarded_by this;
+
+    invariant this.next != this;  // needed to avoid acquiring same lock twice.
+
+
+    public void append(int item) {
+
+        Node curr = this;
+        acquire(curr);
+        Node next := curr.next;
+        while (next != Node.null)
+           invariant isShared(curr);
+           invariant next == Node.null || isShared(next);
+           invariant holds(curr);
+           //invariant forall Node n :: (n != curr) ==> !holds(n);
+           invariant curr.next == next;
+        {
+            acquire(next);
+            Node prev = curr;
+            curr = next;
+            next:=curr.next;
+            release(prev);
+            yield;
+        }
+
+        // assert curr.next == Node.null;  // assert we are at the end!
+
+        Node node = new Node();
+        node.item := item;
+        curr.next := node;
+        release(curr);
+    }
+}

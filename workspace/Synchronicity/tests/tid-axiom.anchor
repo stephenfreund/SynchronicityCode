@@ -1,0 +1,8 @@
+///: args -maxTid=1
+
+class A {
+
+  public void f() {
+      assert tid == 0 || tid == 1;
+  }
+}

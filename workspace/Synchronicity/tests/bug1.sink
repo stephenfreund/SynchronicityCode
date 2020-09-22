@@ -1,0 +1,16 @@
+
+
+class Mutex {
+	int m     N#N;  // this is bad -- leads to instability
+}
+
+
+class Test {
+    Mutex m  B#E;
+    int x    this.m.m == tid ? B:E;
+}
+
+///: (10.14): yields_as clause for Test.x is not transitive
+///: (10.5): Test.x is not Write-Read Stable with respect to Mutex.m (case L)
+///: (10.5): Test.x is not Write-Write Stable with respect to Mutex.m (case A.2)
+/// (10.5): Test.x is not Write-Write Stable with respect to Mutex.m (case M)

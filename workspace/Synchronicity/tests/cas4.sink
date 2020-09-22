@@ -1,0 +1,44 @@
+///: ignore
+
+class C {
+  int x cas;
+
+  public void f4() {
+    int y := this.x;
+    yield;
+    int y2 := this.x;
+    yield;
+    bool z = this.x @ y :~ 0;
+    if (z) {
+      assert y == y2;
+    }
+    return;  // bad ???
+  }
+
+  public void f4b() {
+    int y := this.x;
+    yield;
+    int y2 := this.x;
+    yield;
+    bool z = this.x @ y2 :~ 0;
+    // don't check if succeeded or not, so we
+    // could exit without a successful CAS --
+    // that should be ok, but we need to ensure we
+    // didn't assume we would succeed.
+    return;
+  }
+
+  public void f5() {
+    int y := this.x;
+    int y3 := this.x;
+    yield;
+    int y2 := this.x;
+    yield;
+    bool z = this.x @ y :~ 0;
+    if (z) {
+      assert y == y2;
+    }
+    return;  // bad ???
+  }
+
+}

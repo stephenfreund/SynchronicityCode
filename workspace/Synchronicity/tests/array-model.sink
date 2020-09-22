@@ -1,0 +1,27 @@
+//FML
+class Cow {
+    array T = Cow[B]
+
+    [T] a whenever;
+
+    public void f() {
+       [T] a = new [T](10);
+       Cow c = new Cow();
+       a[0] := c;
+       a[1] := c;
+       a[1] := c;
+       a[1] := c;
+       yield;
+       assert false;
+    }
+}
+
+///: (15.8): This assertion may not hold.
+///: (3.5): Array Array.Cow.T failed Write-Read Left-Mover Check
+///: (3.5): Array Array.Cow.T failed Read-Write Right-Mover Check
+///: (3.5): Array Array.Cow.T failed Read-Write Left-Mover Check
+///: (3.5): Array Array.Cow.T failed Write-Write Right-Mover Check
+///: (3.5): Array Array.Cow.T failed Write-Read Right-Mover Check
+///: (3.5): Array Array.Cow.T failed Write-Write Left-Mover Check
+
+///: (3.19): yields_as clause for Array.Cow.T is not valid

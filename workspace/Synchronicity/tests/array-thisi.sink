@@ -1,0 +1,40 @@
+///: ignore
+
+
+class Cow {
+    array T = int[guarded_by athis]
+    array S = int[guarded_by this]
+    [T] a readonly;
+    [S] b readonly;
+
+    public void f0() {
+        [T] a := this.a;
+        synchronized(a) {
+            a[0] := 0;
+        }
+    }
+
+    public void f1() {
+        [T] a := this.a;
+        synchronized(this) {
+            a[0] := 0;
+        }
+    }
+
+    public void f2() {
+        [S] a := this.b;
+        synchronized(this) {
+            a[0] := 0;
+        }
+    }
+
+    public void f3() {
+        [S] a := this.b;
+        synchronized(a) {
+            a[0] := 0;
+        }
+    }
+}
+
+///: (18.13): Reduction failure
+///: (32.13): Reduction failure

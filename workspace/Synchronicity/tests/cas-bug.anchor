@@ -1,0 +1,25 @@
+
+class Node {
+    volatile Node next  moves_as isLocal(this)? B : N;
+
+    Node(Node next) {
+        this.next = next;
+    }
+}
+
+class Queue {
+
+    volatile Node tail moves_as  N;
+
+    public void enqueue(int value) {
+        Node n = new Node(null);
+        Node last = this.tail;
+        yield;
+        Node next = last.next;
+        if (cas(last, next, next, n)) {
+        }
+        assert false;
+    }
+}
+
+///: (21.9): This assertion may not hold.

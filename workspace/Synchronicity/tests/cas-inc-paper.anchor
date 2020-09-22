@@ -1,0 +1,39 @@
+
+
+class Inc {
+
+	noABA volatile int counter  moves_as isRead() ? N : (newValue == this.counter + 1 ? N : E)
+	  yields_as newValue >= this.counter;
+
+    public void inc() {
+        while(true)
+        {
+            int n = this.counter;
+            if (cas(this,counter,n,n+1)) {
+                break;
+            }
+            yield;
+        }
+    }
+}
+
+
+/*
+
+class Inc {
+
+	noABA volatile int counter;
+
+    public void inc() {
+        while(true)
+        {
+            int n = this.counter;
+            if (cas(this,counter,n,n+1)) {
+                break;
+            }
+            yield;
+        }
+    }
+}
+
+ */

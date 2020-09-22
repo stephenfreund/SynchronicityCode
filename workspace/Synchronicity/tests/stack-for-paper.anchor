@@ -1,0 +1,96 @@
+class Node {
+  int item  moves_as isLocal(this) ? threadlocal : readonly;
+  Node next moves_as isLocal(this) ? threadlocal : readonly;
+
+  //invariant this.item > 0;
+
+  Node(int item, Node next) {
+    this.item = item;
+    this.next = next;
+  }
+}
+
+
+class Stack {
+
+  Node head moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+  modifies this;
+  ensures this.head.item == item && this.head.next == old(this.head);
+  public int push(int item) {
+    acquire(this);
+    Node node = new Node(item, this.head);
+    this.head = node;
+    release(this);
+  }
+
+    modifies this;
+    ensures old(this.head) != null && $result == old(this.head.item) && this.head == old(this.head.next);
+    public int pop() {
+        acquire(this);
+        while (this.head == null)
+        invariant holds(this);
+        invariant nextSpecStep(0);
+        {
+            release(this);
+            yield;
+            acquire(this);
+        }
+        int value = this.head.item;
+        this.head = this.head.next;
+        release(this);
+        return value;
+    }
+
+    modifies this;
+    ensures old(this.head) != null && $result == old(this.head.item) && this.head == old(this.head.next);
+    public int pop2() {
+        while (true)
+            invariant nextSpecStep(0);
+        {
+            acquire(this);
+            if (this.head == null) { break; }
+            release(this);
+            yield;
+        }
+        int value = this.head.item;
+        this.head = this.head.next;
+        release(this);
+        return value;
+    }
+}
+
+
+class StackWithCAS {
+
+	volatile Node head moves_as isLocal(this) ? threadlocal : N;
+
+	public void push(int v) {
+        while (true) {
+            Node next = this.head;
+            Node nu = new Node(v, next);
+            yield;
+            if (cas(this, head, next, nu)) {
+              break;
+            }
+          }
+	}
+
+	modifies this;
+    ensures old(this.head) != null && $result == old(this.head.item) && this.head == old(this.head.next);
+    public int pop() {
+	    while (true)
+	    {
+	      Node top = this.head;
+          yield;
+	        if (top != null) {
+	        Node next = top.next;
+            if (cas(this, head, top, next)) {
+	            return top.item;
+	          }
+	        }
+	        yield;
+	    }
+	}
+}
+

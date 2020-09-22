@@ -1,0 +1,4 @@
+#!/bin/bash
+
+${ANCHOR_HOME}/commands/performance-benchmarks > ./data.txt
+RScript ${ANCHOR_HOME}/commands/performance.R

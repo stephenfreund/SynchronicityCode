@@ -1,0 +1,17 @@
+
+class C {
+
+    array T = int[guarded_by this]
+    array Q = bool[guarded_by this]
+
+    [T] a whenever;
+
+    void f(C c) {
+        [Q{c}] a := c.a;
+    }
+
+
+}
+
+
+///: (10.9): Bad types for read: [C.Q{c}] and [C.T{c}]

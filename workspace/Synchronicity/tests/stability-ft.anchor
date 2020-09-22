@@ -1,0 +1,30 @@
+class VarState {
+
+    array VarState_VC = int[
+        moves_as (this.read != -1)
+                               ? guarded_by this
+                               : isRead()
+                                   ? holds(this) ? B :
+                                     (tid == index ? B : E)
+                                   : holds(this) && tid == index ? B : E
+    ]
+
+    volatile int read  moves_as (this.read != -1)
+                                   ? write_guarded_by this
+                                   : isRead() ? R : E;
+
+
+}
+
+/*
+(3.5): Array Array.VarState.VarState_VC failed Stable Write-Read Check
+
+    array VarState_VC = int[
+    ^
+    Thread t    : _ := x[i];   [(x_owner.read != -1) && !holds(x_owner, t)  ==>  E]
+    Thread u    : y.read := -1;   [(y.read != -1) && (holds(y, u)) && !isRead  ==>  N]
+    Thread t    : _ := x[i];   [x_owner.read == -1 && (isRead) && !holds(x_owner, t) && t == i  ==>  B]
+
+(x_owner == y)
+
+*/

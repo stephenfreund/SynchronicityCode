@@ -1,0 +1,61 @@
+
+class Lock { }
+
+class Buffer {
+
+  // there's an implicit assumption that a thread doesn't hold both locks at once.
+  Lock popLock       moves_as readonly;
+  Lock pushLock      moves_as readonly;
+
+  volatile bool full          moves_as isRead ? (holds(this.popLock) ? (this.full ? R : N)
+                               : holds(this.pushLock) ? (this.full ? N : R)
+                               : E)
+                            : (holds(this) && holds(this.popLock) ? (this.full && !newValue ? N : E)
+                               : holds(this) && holds(this.pushLock) ? (!this.full && newValue ? N : E)
+                               : E)
+                    yields_as (holds(this.popLock) && this.full ==> newValue)
+                          && (holds(this.pushLock) && !this.full ==> !newValue);
+
+
+  volatile int data          moves_as  isRead ? holds(this) && holds(this.popLock) && this.full ? B : E
+                            : holds(this) && holds(this.pushLock) && !this.full ? B : E;
+
+  invariant this.popLock != this.pushLock;
+
+  // asymmetry with requires on push but not pop is because of the order of conditional tests in full's spec...
+
+  requires !holds(this.popLock);
+  public void push(int x) {
+    synchronized(this.pushLock) {
+        while (true)
+          invariant holds(this.pushLock);
+          invariant !holds(this.popLock);
+        {
+          if (!this.full) { break; }
+          yield;
+        }
+        yield;
+        synchronized(this) {
+            this.data = x;
+            this.full = true;
+        }
+    }
+  }
+
+  public int pop() {
+    synchronized(this.popLock) {
+        while (true)
+          invariant holds(this.popLock);
+        {
+          if (this.full) { break; }
+          yield;
+        }
+        yield;
+        synchronized(this) {
+            int result = this.data;
+            this.full = false;
+            return result;
+        }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+//FML
+class Cow {
+    array A = int[B#B]
+    array S = int[N#N]
+    array T = int[index % 2 == 0 ? B:E]
+
+    [T] a whenever;
+
+    public void f([S] b) {
+       [A] a; // := this.a;
+       int x = 0;
+       int y = 10;
+       a = new [A](y);
+       a[x] := x;
+       x := a[x];
+       x = a.length + 1;
+    }
+}
+
+///: (3.5): Array Array.Cow.A failed Write-Write Right-Mover Check
+///: (3.5): Array Array.Cow.A failed Write-Read Left-Mover Check
+///: (3.5): Array Array.Cow.A failed Read-Write Right-Mover Check
+///: (3.5): Array Array.Cow.A failed Read-Write Left-Mover Check
+///: (5.5): Array Array.Cow.T failed Write-Write Right-Mover Check
+///: (5.5): Array Array.Cow.T failed Write-Read Left-Mover Check
+///: (5.5): Array Array.Cow.T failed Read-Write Right-Mover Check
+///: (5.5): Array Array.Cow.T failed Read-Write Left-Mover Check
+///: (3.5): Array Array.Cow.A failed Write-Read Right-Mover Check
+///: (3.5): Array Array.Cow.A failed Write-Write Left-Mover Check
+///: (5.5): Array Array.Cow.T failed Write-Read Right-Mover Check
+///: (5.5): Array Array.Cow.T failed Write-Write Left-Mover Check
+
+///: (3.19): yields_as clause for Array.Cow.A is not valid
+///: (5.19): yields_as clause for Array.Cow.T is not valid

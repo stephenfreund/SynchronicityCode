@@ -1,0 +1,42 @@
+
+class Cow {
+  array T = int[threadlocal]  // bug -- should be threadlocal for array????
+  array T2 = int[isLocal(athis) ? B : E]
+
+  requires x > 0;
+  public void f(int x) {
+    assert x > -10;
+  }
+
+  requires x > 0;
+  public void g(int x) {
+    assert x > 10;
+  }
+
+  public void h() {
+    [T{this}] a = new [T{this}](10);
+    int i = 0;
+    while (i < 10)
+      invariant isLocal(a);
+    {
+
+      a[i] := 0;
+      i = i + 1;
+    }
+  }
+
+  public void h2() {
+    [T2{this}] a = new [T2{this}](10);
+    int i = 0;
+    while (i < 10)
+      invariant forall int j :: 0 <= j && j < i ==> a[j] == j;
+    {
+
+      a[i] := i;
+      i = i + 1;
+    }
+  }
+}
+
+///: (13.5): This assertion may not hold.
+///: (23.7): Reduction failure

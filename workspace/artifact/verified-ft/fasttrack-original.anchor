@@ -1,0 +1,321 @@
+#define EPOCH_TID(x) (x % 256)
+#define EPOCH_CLOCK(x) (x / 256)
+#define EPOCH_LEQ(x,y) x <= y
+#define INC(x) (x + 256)
+
+#define VC_GET(vc, i) ((i < vc.length) ? vc[i] : (i))
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
+
+
+/*
+
+ An Anchor implementation of the VerifiedFT-v2 algorithm from
+
+  VerifiedFT: A Verified, High-Performance Precise Dynamic Race Detector
+  James R. Wilcox, Cormac Flanagan, Stephen N. Freund
+  PPOPP, 2018
+
+ We refer the reader to that paper for a full discussion of the
+ synchronization and algorithm.
+
+ Notes:
+
+  * In the original, inheritance was used to create three specialized
+    versions of VectorClocks for ThreadState, VarState, LockState.  In
+    Anchor, we needed to duplicate the VectorClock code in each of the
+    three classes since there is no inheritance.
+
+  * Unlike the original, we include initializers for each of the
+    three main classes.
+
+  * We use array abbreviations in Anchor, which were not included in
+    the paper, eg:
+
+    array T = int[moves_as ...]
+
+    This instroduces an array type abbreviation that can be used
+    later, as in
+
+    [T] v = new [T](10);
+
+  * In array specs, the array object is referred to as "athis", and the
+    enclosing object is "this".
+
+  * We encode an ecoch tid@c as (tid + c * 256).  That is, the lower 8
+    bits of an int is the tid and the upper 24 is the clock.  We
+    assume no more than 255 threads will be used and that overflow
+    does not occur.  We use the constant -1 to represent the SHARED
+    special value.  This would be better implemented with bit-wise
+    operations, but Anchor doesn't support them.
+
+*/
+
+class Object { }
+
+class VarState {
+
+  array VC_VarState = int[moves_as
+
+  array VC_Local = int[moves_as isRead() ? B : E]
+
+  volatile int write
+
+  volatile [VC_VarState] vc
+
+  public VarState() {
+    this.read = 0;
+    this.write = 0;
+    this.vc = new [VC_VarState](0);
+  }
+
+  int get(int i) {
+    [VC_VarState] vc = this.vc;
+    return (i < vc.length) ? vc[i] : i;
+  }
+
+  void ensureCapacity(int n) {
+    if (n > this.vc.length) {
+      [VC_VarState] newVC = new [VC_VarState](n);
+
+      for (int i = 0; i < n; i = i + 1)
+      {
+        newVC[i] = this.get(i);
+      }
+      this.vc = newVC;
+    }
+  }
+
+  void set(int index, int value) {
+    this.ensureCapacity(index + 1);
+    this.vc[index] = value;
+  }
+
+  int size() {
+    return this.vc.length;
+  }
+
+  bool leq(ThreadState st) {
+    int stSize = st.size();
+    int thisSize = this.size();
+    int n = MAX(thisSize, stSize);
+    int i = 0;
+    while (i < n)
+    {
+      if (this.get(i) > st.get(i)) {
+        return false;
+      }
+      i = i + 1;
+    }
+    return true;
+  }
+}
+
+class LockState {
+  Object target moves_as isLocal(this) ? threadlocal : readonly;
+
+  [VC_LockState] vc moves_as isLocal(this) ? threadlocal : guarded_by this.target;
+
+  public LockState(Object target) {
+    this.target = target;
+    this.vc = new [VC_LockState](0);
+  }
+
+  int get(int i) {
+    [VC_LockState] vc = this.vc;
+    return (i < vc.length) ? vc[i] : i;
+  }
+
+  void ensureCapacity(int n) {
+    [VC_LockState] vc = this.vc;
+
+    if (n > vc.length) {
+      [VC_LockState] newVC = new [VC_LockState](n);
+      for (int i = 0; i < n; i = i + 1)
+      {
+        newVC[i] = this.get(i);
+      }
+      this.vc = newVC;
+    }
+  }
+
+  void set(int index, int value) {
+    this.ensureCapacity(index + 1);
+    this.vc[index] = value;
+  }
+
+  int size() {
+    return this.vc.length;
+  }
+
+  void copy(ThreadState st) {
+    [VC_LockState] oldVCPtr = this.vc;
+
+    this.ensureCapacity(st.size());
+    for (int j = 0; j < this.size(); j = j + 1)
+    {
+      int x = st.get(j);
+      this.vc[j] = x;
+    }
+  }
+}
+
+class ThreadState {
+
+  array VC_ThreadState = int[moves_as
+
+  volatile bool stopped moves_as
+
+  Tid t     moves_as  isLocal(this) ? threadlocal : readonly;
+
+
+  volatile [VC_ThreadState] vc  moves_as
+
+  invariant isShared(this.vc) && this.vc != null;
+
+
+  int get(int i) {
+    [VC_ThreadState{this}] vc = this.vc;
+    return (i < vc.length) ? vc[i] : i;
+  }
+
+  void set(int index, int value) {
+    this.ensureCapacity(index + 1);
+    this.vc[index] = value;
+  }
+
+  void ensureCapacity(int n) {
+        [VC_ThreadState] vc = this.vc;
+
+    if (n > vc.length) {
+      [VC_ThreadState] newVC = new [VC_ThreadState](n);
+
+      for (int i = 0; i < n; i = i + 1)
+      {
+        newVC[i] = this.get(i);
+      }
+      this.vc = newVC;
+    }
+  }
+
+  int size() {
+    return this.vc.length;
+  }
+
+  void joinThread(ThreadState st) {
+    for (int i = 0; i < st.size(); i = i + 1) {
+      this.set(i, MAX(this.get(i), st.get(i)));
+    }
+  }
+
+  void inc(int t) {
+    this.set(t, INC(this.get(t)));
+  }
+
+  public bool write(VarState sx) {
+    int e = this.get(this.t);
+    int w = sx.write;
+    if (w == e) { return true; }
+    yield;
+    synchronized(sx) {
+      w = sx.write;
+      int ww = this.get(EPOCH_TID(w));
+      if (w > ww) { return false; }
+      int r = sx.read;
+      if (r != -1) {
+        int rr = this.get(EPOCH_TID(r));
+        if (r > rr) { return false; }
+        sx.write = e;
+      } else {
+        if (!sx.leq(this)) {
+          return false;
+        }
+        sx.write = e;
+      }
+    }
+    return true;
+  }
+;
+  public bool read(VarState sx) {
+    int t = this.t;
+    int e = this.get(t);
+
+    int r;
+    r = sx.read;
+    if (r == e || r == -1 && sx.get(t) == e) { return true; }
+    yield;
+    synchronized(sx) {
+      int w = sx.write;
+      int ww = this.get(EPOCH_TID(w));
+      if (w > ww) { return false; }
+      r = sx.read;
+      if (r != -1) {
+        int rr = this.get(EPOCH_TID(r));
+        if (r <= rr) {
+          sx.read = e;
+        } else {
+          sx.set(EPOCH_TID(r), r);
+          sx.set(t, e);
+          sx.read = -1;
+          return true;
+        }
+      } else {
+        sx.set(t, e);
+      }
+    }
+    return true;
+  }
+
+  public void acq(LockState sm) {
+    [VC_ThreadState] oldThisVc = this.vc;
+    for (int j = 0; j < sm.size(); j = j + 1)
+    {
+      this.set(j, MAX(this.get(j), sm.get(j)));
+    }
+  }
+  public void rel(LockState sm) {
+    sm.copy(this);
+  }
+
+  public ThreadState(int t, ThreadState forker) {
+    this.t = t;
+    this.stopped = false;
+
+    if (t != 0) {
+
+      int n = MAX(t + 1, forker.size());
+      [VC_ThreadState] vc = new[VC_ThreadState] (n);
+      for (int i = 0; i < n; i = i + 1)
+      {
+        vc[i] = i == t ? INC(forker.get(i)) : forker.get(i);
+      }
+      this.vc = vc;
+    } else {
+      [VC_ThreadState] vc = new[VC_ThreadState](1);
+      vc[0] = 256;
+      this.vc = vc;
+    }
+  }
+
+  public ThreadState fork(int uTid) {
+    // We create the new ThreadState object here so that we
+    // have threadlocal access to it.
+    ThreadState u = new ThreadState(uTid, this);
+    this.inc(this.t);
+    return u;
+  }
+
+
+  public void join(ThreadState u) {
+    [VC_ThreadState] oldVCPtr = this.vc;
+    int n = MAX(u.size(), this.size());
+
+    for (int i = 0; i < n; i = i + 1)
+    {
+      int x = MAX(u.get(i), this.get(i));
+      this.set(i, x);
+    }
+    this.inc(this.t);
+  }
+
+
+}

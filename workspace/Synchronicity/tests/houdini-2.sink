@@ -1,0 +1,57 @@
+///: args -verify=Houdini
+
+class Cow {
+
+    array Array = int[isLocal(this) ? threadlocal : readonly]
+
+    [Array{this}] elems  isLocal(this) ? threadlocal : readonly;
+
+    invariant p5 ==> (this.elems != [Array{this}].null);
+    invariant p6 ==> (forall int i :: 0 <= i && i < this.elems.length ==> this.elems[i] == i);
+    invariant p7 ==> (forall int i :: 0 <= i && i < this.elems.length ==> this.elems[i] == 2);
+    invariant p8 ==> (this.elems == [Array{this}].null);
+
+
+    void init() {
+        [Array{this}] elems = new [Array{this}](16);
+
+        // init elems before storing into this, because storing causes the array to become shared...
+        for (int i = 0; i < 16; i = i + 1)
+            invariant p1 ==> (forall int k :: 0 <= k && k < i ==> elems[k] == k);
+            invariant p4 ==> (forall int k :: 0 <= k && k <= i ==> elems[k] == k);
+            invariant p2 ==> (isLocal(elems));
+            invariant p3 ==> (isShared(elems));
+        {
+            elems[i] := i;
+        }
+        this.elems := elems;
+    }
+
+    int get(int i) {
+        [Array{this}] elems := this.elems;
+        int result := elems[i];
+        return result;
+    }
+
+}
+
+class Main {
+   public void f() {
+   }
+
+   public void main() {
+       Cow c = new Cow();
+       c.init();
+       int y = c.get(5);
+       assert y == 5;
+   }
+}
+
+bool p1;
+bool p2;
+bool p3;
+bool p4;
+bool p5;
+bool p6;
+bool p7;
+bool p8;

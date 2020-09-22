@@ -1,0 +1,25 @@
+
+
+class Inc {
+  volatile Inc next moves_as isLocal(this) ? threadlocal : readonly;
+
+  public void f() {
+    Inc i = new Inc();
+    Inc j = new Inc();
+    i.next = j;
+    j.next = i;
+  }
+
+  public void g() {
+    Inc i = new Inc();
+    Inc j = new Inc();
+    i.next = j,
+    j.next = i;
+  }
+
+}
+
+
+
+///: (10.5): Reduction failure
+

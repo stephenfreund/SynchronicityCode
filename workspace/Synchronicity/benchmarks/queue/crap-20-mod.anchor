@@ -1,0 +1,146 @@
+/*
+ ./v.sh benchmarks/queue/crap-20-mod.anchor  -B=-trace -B=-timeLimit:900 -errorDots 
+ ./v.sh benchmarks/queue/crap-20-mod.anchor  -B=-trace -B=-timeLimit:900 -errorDots -verify=Sequential
+*/
+
+/*
+open log/errors-frames.html
+ */
+
+#define Inv(a,h,t)  (a != null && a.length == 512 && 0 <= h && h < 512 && 0 <= t && t < 512)
+#define Pos(x)      ((x)%512)
+#define isEmpty(h,t)   ((t) == (h))
+#define isFull(h,t)    (((t) + 1) % 512 == (h))
+
+#define isInHeadToTail(x)  (!isEmpty(this.head, this.tail) && \
+        (((this.head) <= index && index < (this.tail)) || ((this.tail) <= (this.head) && (index < (this.tail) || (this.head) <= index))))
+#define isInTailToHead(x)  (!isFull(this.head, this.tail) &&  (((this.head) <= (this.tail) && (index < (this.head) || (this.tail) <= index)) || ((this.tail) <= index && index < (this.head))))
+
+
+#define isEmptier(x)  ((this.tail < this.head ==> this.head <= x || x <= this.tail) && \
+                       (this.head <= this.tail ==> (this.head <= x && x <= this.tail)))
+#define isFuller(x)   ((this.tail < this.head ==> this.tail <= newValue && newValue < this.head) &&\
+                       (this.head <= this.tail ==> (this.tail <= newValue || newValue < this.head)))
+
+
+
+axiom (forall int a :: { a % 512 } 0 <= a && a < 512 ==> a%512 == a);
+axiom (forall int a :: { (512 + a) % 512 } 0 <= a && a < 512 ==> (512 + a)%512 == a);
+axiom (forall int a :: { (512 + a) % 512 } -512 <= a && a < 0 ==> (512 + a)%512 == 512 + a);
+axiom 512 % 512 == 0;
+axiom (512 % 512) % 512 == 0;
+
+/*axiom (forall int x, int y :: { (512 + y - x) % 512, (y + 1) % 512 != x }
+        0 <= x && x < 512 &&
+        0 <= y && y < 512 &&
+        (y + 1) % 512 != x
+        ==> 0 <= (512 + y - x) % 512 && (512 + y - x) % 512 < 511);
+*/
+
+axiom (forall int x, int y :: { (512 + y - x) % 512 - 1 } { (512 + y - (x + 1) % 512) % 512 }
+    0 <= x && x < 512 &&
+    0 <= y && y < 512 &&
+    y != x
+    ==> (512 + y - x) % 512 - 1 == (512 + y - (x + 1) % 512) % 512);
+
+
+axiom (forall int x, int y :: {  (512 + (y + 1) % 512 - x) % 512 } {  (512 + y - x) % 512 + 1 }
+    0 <= x && x < 512 &&
+    0 <= y && y < 512 &&
+    (y + 1) % 512 != x
+    ==> (512 + y - x) % 512 + 1 == (512 + (y + 1) % 512 - x) % 512);
+
+
+class Queue {
+
+    array T = int[moves_as isLocal(this) ? B :
+    Inv(this.elems, this.head, this.tail) &&
+            (tid == 1 && isInTailToHead(index) ||
+            (tid == 2 && isInHeadToTail(index))) ? B :
+    E
+     ]
+
+    [T] elems moves_as isLocal(this) ? threadlocal : readonly;
+
+    volatile int tail
+      moves_as  isLocal(this) ? B : isRead() ? tid == 1 ? B : N
+                        : tid == 1 && !isFull(this.head, this.tail) && newValue == (this.tail + 1)%512 ? N : E
+      yielding ((tid == 1 || tid == 2) && Inv(this.elems, this.head, this.tail))
+                 ==> (Inv(this.elems, this.head, newValue)
+                      && (tid == 1 ==> this.tail == newValue)
+                      && (tid == 2 ==> isFuller(newValue) && (!isEmpty(this.head, this.tail) ==> !isEmpty(this.head, newValue))));
+
+
+
+    volatile int head
+      moves_as  isLocal(this) ? B : isRead() ? tid == 2 ? B : N
+                        : tid == 2 && !isEmpty(this.head, this.tail) && newValue == Pos(this.head + 1) ? N : E
+      yielding ((tid == 1 || tid == 2) && Inv(this.elems, this.head, this.tail) ==>
+            (Inv(this.elems, newValue, this.tail)
+             && (tid == 2 ==> this.head == newValue)
+             && (tid == 1 ==> isEmptier(newValue) && (!isFull(this.head, this.tail) ==> !isFull(newValue, this.tail)))));
+
+
+
+    // REP INV:
+
+    // ABSTRACT VARS:
+    ghost Seq<int> spec moves_as isLocal(this) ? B : E;
+
+    // invariant this.elems != null;
+    invariant Inv(this.elems, this.head, this.tail); // (a != null && a.length == 512 && 0 <= h && h < 512 && 0 <= t && t < 512)
+    invariant SeqLen(this.spec) == (512 + this.tail - this.head) % 512;
+
+
+    // INVARIANTS TO MAP CONCRETE -> ABSTRACT
+    invariant (forall int i :: { i % 512 } this.head <= i && i < this.head + SeqLen(this.spec) ==> (this.elems[i % 512] == SeqNth(this.spec, i - this.head)));
+
+    // ALL SPECS WRITTEN IN TERMS OF ABSTRACT VARS
+    ensures this.spec == SeqEmpty<int>();
+    public Vector() {
+        this.spec = SeqEmpty<int>();
+        this.elems = new [T](512);
+    }
+
+
+    requires tid == 1;
+    modifies this, this.elems;  // slightly unfortunate -> still refers to concrete state...
+    ensures this.spec == old(this.spec) || (this.spec == SeqConcat(old(this.spec), SeqUnit(x)));
+    public void enqueue(int x) {
+        if (!isFull(this.head, this.tail)) {
+            yield;
+            nocheck assert Inv(this.elems, this.head, this.tail);
+            nocheck assert SeqLen(this.spec) == (512 + this.tail - this.head) % 512;
+            nocheck assert !isFull(this.head, this.tail);
+            assume (forall int i :: { i % 512 } this.head <= i && i < this.head + SeqLen(this.spec) ==> (this.elems[i % 512] == SeqNth(this.spec, i - this.head)));
+            int len = SeqLen(this.spec);
+            assert len >= 0;
+            nocheck assume this.tail == (this.head + len) % 512;
+            this.elems[this.tail] = x;
+            nocheck assert this.elems[ (this.head + len) % 512 ] == x;
+           // assume (forall int i :: { i % 512 } this.head <= i && i < this.head + len + 1 ==> (this.elems[i % 512] == SeqNth(this.spec, i - this.head)));
+            this.spec = SeqConcat(this.spec, SeqUnit(x));
+            nocheck assert SeqNth(this.spec, len) == x;
+            this.tail = (this.tail + 1) % 512;
+        }
+    }
+/*
+    requires tid == 2;
+    modifies this, this.elems;  // slightly unfortunate -> still refers to concrete state...
+    ensures ($result == 0 && this.spec == old(this.spec))
+            || ($result == old(SeqNth(this.spec, 0)) && this.spec == SeqExtract(old(this.spec), 1, SeqLen(old(this.spec))-1));
+    public int dequeue() {
+        if (!isEmpty(this.head, this.tail)) {
+            yield;
+            nocheck assert !isEmpty(this.head, this.tail);
+            int result = this.elems[this.head];
+            int len = SeqLen(this.spec);
+            this.spec = SeqExtract(this.spec, 1, SeqLen(this.spec)-1);
+            this.head = (this.head + 1) % 512;
+            return result;
+        } else {
+            return 0;
+        }
+    }
+*/
+}

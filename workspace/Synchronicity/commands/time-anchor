@@ -1,0 +1,8 @@
+#!/bin/bash
+
+(time -p scala -J-Xmx4g -J-Xss40m -classpath ${ANCHOR_HOME}/bin anchor.tool.Anchor $* > /dev/null) 2>&1 > /tmp/time.txt 2>&1
+RETVAL=$?
+[ $RETVAL -eq 0 ] && echo `grep "real" /tmp/time.txt | cut -f2 -d " " `
+[ $RETVAL -ne 0 ] && echo -10000
+
+exit 0

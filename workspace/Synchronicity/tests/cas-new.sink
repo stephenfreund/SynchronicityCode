@@ -1,0 +1,111 @@
+///: ignore
+
+
+class AtomicInt {
+
+	int x      (this.nx == tid ? R#N : N#E);
+
+    Tid nx     this.nx == tid ?
+                    (isRead ? E : (newValue == tid ? B : (newValue == Tid.null ? L : E)))
+                  : (isRead ? E : (this.nx == Tid.null && newValue == tid ? R : E)) !;
+
+
+    int get() {
+        if (*) {
+            assume this.nx == Tid.null;
+            this.nx := tid;
+        }
+        int result := this.x;
+        return result;
+    }
+
+    void set(int v) {
+        assume this.nx == Tid.null;
+        this.nx := tid;
+        this.x := v;
+        this.nx := Tid.null;
+    }
+
+
+    bool CAS(int o, int v) {
+        if (*) {
+            assume this.nx == tid;
+            int x := this.x;
+            if (x == o) {
+                this.x := v;
+                this.nx := Tid.null;
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            assume this.nx != tid;
+            int x := this.x;
+            return false;
+        }
+    }
+}
+
+
+
+class C {
+    AtomicInt z readonly;
+
+    requires (forall AtomicInt t :: t.nx != tid);
+    public void f() {
+        AtomicInt z :=this.z;
+        assume z !=AtomicInt. null;
+        ## assert _pc == PreCommit;
+        int w = z.get();
+    }
+
+    requires (forall AtomicInt t :: t.nx != tid);
+    public void wwww(int v) {
+        AtomicInt z :=this.z;
+        assume z !=AtomicInt. null;
+        ## assert _pc == PreCommit;
+        assume z.nx != tid;
+        int x = z.get();
+        yield;
+        ## assert _pc == PreCommit;
+        bool w = z.CAS(x, 3);
+        if (w) {
+            assert z.x == 3;
+        } else {
+            // SHOULD NOT HOLD: assert z.x == 3;
+        }
+        assert z.nx != tid;
+    }
+
+    requires (forall AtomicInt t :: t.nx != tid);
+    public void w2(int v) {
+        AtomicInt z :=this.z;
+        assume z !=AtomicInt. null;
+        ## assert _pc == PreCommit;
+        while (true)
+            invariant z.nx != tid;
+            invariant z !=AtomicInt. null;
+        {
+            ## assert _pc == PreCommit;
+            int x = z.get();
+
+            yield;
+
+            bool w = z.CAS(x, 3);
+            if (w) {
+                assert z.x == 3;
+                break;
+            } else {
+                // SHOULD NOT HOLD: assert z.x == 3;
+            }
+            yield;
+        }
+        assert z.nx != tid;
+    }
+
+    public void w3(int v) {
+        AtomicInt z :=this.z;
+        z.set(4);
+    }
+}
+

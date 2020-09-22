@@ -1,0 +1,24 @@
+
+class Node {
+
+    void g() {
+      for (int i = 0; i < 10; i = i + 1) {
+        yield;
+      }
+    }
+
+    public void bad() {
+      acquire(this);
+      this.g();
+      release(this);
+    }
+
+    public void good() {
+      acquire(this);
+      this.g() invariant holds(this);
+      release(this);
+    }
+
+}
+
+///: (13.7): lock not held

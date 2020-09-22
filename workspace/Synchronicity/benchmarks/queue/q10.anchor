@@ -1,0 +1,89 @@
+// Use -maxTid=1 on command line!!!
+
+#define SIZE      this.elems.length
+#define RepInv(this)  (this.elems != null && inOpenClosed(0, this.head, SIZE) && inOpenClosed(0, this.tail, SIZE))
+#define inOpenClosed(a,x,b)   ((a)<=(x)<(b))
+#define inHeadToTail(x)  (this.head <= this.tail ? inOpenClosed(this.head,x,this.tail)				   \
+			                         : (inOpenClosed(this.head,x,SIZE) || inOpenClosed(0,x,this.tail)))
+#define inTailToHead(x)  (this.tail < this.head ? inOpenClosed(this.tail,x,this.head) \
+      	                                        : (inOpenClosed(this.tail,x,SIZE) || inOpenClosed(0,x,this.head)))
+#define newHead(x)       (inHeadToTail(x) || (x)==this.tail)
+
+axiom (forall int x, int y :: 0 <= x && x < y ==> x % y == x);
+axiom (forall int x, int y :: y <= x && x < (y+y) ==> x % y == x - y);
+axiom (forall int x :: 0 < x ==> x % x == 0);
+
+
+class Pair {
+    int key moves_as isLocal(this) ? B : readonly;
+    int value moves_as isLocal(this) ? B : readonly;
+    public Pair(int key, int value) {
+        this.key = key; this.value = value;
+    }
+}
+
+class Queue {
+
+  array T = Pair[moves_as RepInv(this) &&
+                         (   (tid == 0 ==> inTailToHead(index))
+                          && (tid == 1 ==> inHeadToTail(index))) ? B : E ]
+
+    [T] elems moves_as isLocal(this) ? B : readonly;
+
+    volatile int tail
+      moves_as isRead() ? tid == 0 ? B : N
+	                    : tid == 0 && inTailToHead(newValue) ? N : E
+      yields_as RepInv(this) ==> inTailToHead(newValue);
+
+    volatile int head
+      moves_as isRead() ? tid == 1 ? B : N
+    	                : tid == 1 && newHead(newValue) ? N : E
+      yields_as RepInv(this) ==> newHead(newValue);
+
+    ghost Seq<Pair> spec;
+
+    invariant RepInv(this);
+    invariant this.spec.length == (SIZE + this.tail - this.head) % SIZE;
+
+    invariant (forall int i :: // { this.elems[i] }
+                      inHeadToTail(i)  ==> this.elems[i] == this.spec[(SIZE + i - this.head)%SIZE]);
+
+
+
+    ensures this.spec == SeqEmpty<Pair>();
+    public Vector() {
+      // spec, head, tail all zero/empty initialized
+      this.elems = new [T](512);
+    }
+
+    requires tid == 0;
+    modifies this;
+    ensures !$result && this.spec == old(this.spec) || $result && (this.spec == old(this.spec) ++ [x]);
+    public bool enqueue(Pair x) {
+        if ((this.tail + 1) % SIZE != this.head) {
+            yield;
+            this.elems[this.tail] = x;
+            this.spec = this.spec ++ [x];
+            this.tail = (this.tail + 1) % SIZE;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    requires tid == 1;
+    modifies this;
+    ensures $result == null && this.spec == old(this.spec)
+            || old(this.spec) == [$result] ++ this.spec;
+    public Pair dequeue() {
+        if (this.head != this.tail) {
+            yield;
+            Pair result = this.elems[this.head];
+            this.spec = this.spec[1..SeqLen(this.spec)];
+            this.head = (this.head + 1) % SIZE;
+            return result;
+        } else {
+            return null;
+        }
+    }
+}

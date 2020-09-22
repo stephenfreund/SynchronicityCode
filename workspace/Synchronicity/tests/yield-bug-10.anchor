@@ -1,0 +1,23 @@
+
+
+class Queue {
+
+    int size moves_as (0 <= this.size && this.size <= 10)
+                  ? (isRead ? (holds(this)?B:E)
+                            : (0 <= newValue && newValue <= 10) ? (holds(this)?B:E) : E)
+                  : E
+        yields_as 0 <= newValue && newValue <= 10;
+
+
+    int capacity moves_as readonly
+    //    yields_as this.capacity == newValue
+    ;
+
+    volatile int size2 moves_as (0 <= this.size2 && this.size2 <= this.capacity) ?
+                   (isRead ? (write_guarded_by this)
+                           : (0 <= newValue && newValue <= this.capacity) ? (write_guarded_by this) : E) : E
+        yields_as 0 <= this.size2 && this.size2 <= this.capacity ==> 0 <= newValue && newValue <= this.capacity;
+
+}
+
+///: (9.33): yields_as clause for Queue.size is not reflexive

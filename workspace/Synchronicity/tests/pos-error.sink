@@ -1,0 +1,17 @@
+
+class Cow {
+	int x 	guarded_by this.y;
+	Cow y   readonly;
+    invariant this.y != Cow.null;
+	public void f() {
+		while (true)
+		{
+			yield; // BAD
+			Cow y := this.y;
+			synchronized(y) {
+			}
+		}
+	}
+}
+
+///: (7.3): Phase must be invariant at loop head

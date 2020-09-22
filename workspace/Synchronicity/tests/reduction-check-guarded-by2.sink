@@ -1,0 +1,18 @@
+// OK
+
+class Cow {
+    Cow lock isLocal(this) ? threadlocal : readonly;
+    int c1 isLocal(this) ? threadlocal : guarded_by this.lock;
+    invariant this.lock != Cow.null;
+    public void f() {
+        Cow c = new Cow();
+        int t;
+        c.lock := this;
+        Cow lock := this.lock;
+        synchronized(lock) {
+            t:=c.c1;
+            t:=this.c1;
+        }
+    }
+
+}

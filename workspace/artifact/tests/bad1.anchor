@@ -1,0 +1,9 @@
+
+
+class Bad {
+  volatile int y moves_as isLocal(this) ? B : N;
+  public void inc()  {
+    this.y = this.y + 1;  // error: two non-mover accesses
+  }
+}
+

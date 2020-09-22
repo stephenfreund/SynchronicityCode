@@ -1,0 +1,18 @@
+
+
+/*
+
+Do we need check for this??? Or does stability do it???
+
+*/
+
+class Cow {
+
+    int x    holds(this) ? this.y == this.x ? B#(newValue == this.y ? B:E):E:E
+             yields_as (this.y == this.x) ==> (newValue == this.x);
+
+    int y    holds(this) ? this.y == this.x ? B#(newValue == this.x ? B:E):E:E
+             yields_as this.y == this.x ==> newValue == this.y;
+
+
+}

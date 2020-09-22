@@ -1,0 +1,124 @@
+///: ignore
+
+
+class AtomicInt {
+
+	int x     isLocal(this) ? B : (  (this.xnw == tid ? R : N)
+                                      # (this.xnw == tid ? N : E) );
+
+	// Is tid the next writer?  Not part of source -- visible only at Boogie level.
+	Tid xnw      E;
+
+
+    int get() {
+        if (isShared(this)) {
+            bool test;
+            // possibly become the next writer
+            havoc test;
+            if (test) {
+                AtomicInt z = this;
+                # AtomicInt.xnw[z] := tid;
+            }
+        }
+        int result := this.x;
+        return result;
+    }
+
+    void set(int v) {
+        if (isShared(this)) {
+            # assert AtomicInt.xnw[z] == Tid.null;
+        }
+        this.x := v;
+    }
+
+
+    bool CAS(int o, int v) {
+        if (!isShared(this)) {
+            int current := this.x;
+            if (o == current) {
+                this.x := v;
+                AtomicInt z = this;
+                # AtomicInt.xnw[z] := Tid.null;
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            bool isNextWriter;
+            AtomicInt z = this;
+            int current := this.x;
+            # if (AtomicInt.xnw[z] == tid) {
+                if (o == current) {
+                    this.x := v;
+                    # AtomicInt.xnw[z] := Tid.null;
+                    return true;
+                } else {
+                    return false;
+                }
+            # }
+            return false;
+         }
+    }
+}
+
+
+class C {
+    AtomicInt z readonly;
+
+    public void f() {
+        AtomicInt z :=this.z;
+        assume z !=AtomicInt. null;
+        #assert _pc == PreCommit;
+        int w = z.get();
+    }
+
+    public void wwww(int v) {
+        AtomicInt z :=this.z;
+        assume z !=AtomicInt. null;
+        #assert _pc == PreCommit;
+        assume z.xnw != tid;
+        int x = z.get();
+        bool w = z.CAS(x, 3);
+        if (w) {
+            assert z.x == 3;
+        } else {
+            // SHOULD NOT HOLD: assert z.x == 3;
+        }
+        assert z.xnw != tid;
+    }
+
+    public void w2(int v) {
+        AtomicInt z :=this.z;
+        assume z !=AtomicInt. null;
+        #assert _pc == PreCommit;
+        assume z.xnw != tid;
+        while (true)
+            invariant z.xnw != tid;
+            invariant z !=AtomicInt. null;
+        {
+            #assert _pc == PreCommit;
+            int x = z.get();
+
+            yield;
+
+            bool w = z.CAS(x, 3);
+            if (w) {
+                assert z.x == 3;
+                break;
+            } else {
+                // SHOULD NOT HOLD: assert z.x == 3;
+            }
+            yield;
+        }
+        assert z.xnw != tid;
+    }
+
+    public void w3(int v) {
+        AtomicInt z :=this.z;
+        assume z !=AtomicInt. null;
+        assume z.xnw != tid;
+        z.set(4);
+        assert z.xnw != tid;
+    }
+}
+

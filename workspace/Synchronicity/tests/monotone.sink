@@ -1,0 +1,101 @@
+
+class SX {
+
+    // monotone false -> true.
+    bool b  (!this.b) ? write_guarded_by this : (R#E);
+
+    // just use "a" as a one element array...
+    int  a  (!this.b)
+              ? guarded_by this
+              : (((holds(this) || tid == 0) ? B:E) # ((holds(this) && tid == 0) ? B:E));
+
+    public void notSharedYet() {
+        assume tid == 0;
+        bool temp := this.b;
+        if (!temp) {
+            yield;
+            synchronized(this) {
+                this.a := 3;
+            }
+        }
+    }
+
+    public void sharedWrite() {
+        assume tid == 0;
+        bool temp := this.b;
+        if (temp) {
+            synchronized(this) {
+                this.a := 3;
+            }
+        }
+    }
+
+    public void sharedReadByTid0() {
+        assume tid == 0;
+        bool temp := this.b;
+        if (temp) {
+            int x := this.a;
+        }
+    }
+
+    public void BadSharedReadByTidNot0() {
+        assume tid != 0;
+        bool temp := this.b;
+        if (temp) {
+            int x := this.a;  // Bad: Need to hold lock
+        }
+    }
+
+    public void okSharedReadByTidNot0() {
+        assume tid != 0;
+        bool temp := this.b;
+        if (temp) {
+            synchronized(this) {
+                int x := this.a;
+            }
+        }
+    }
+
+    public void f() {
+        synchronized(this) {
+            bool temp := this.b;
+            if (!temp) {
+                // ok: b is false, setting to false
+                this.b := false;
+            }
+            yield;
+            // bad: don't know if true or false
+            this.b := true;  // bad: don't know if true or false
+        }
+        yield;
+        synchronized(this) {
+            bool temp := this.b;
+            if (!temp) {
+                // ok: b is false, setting to false
+                this.b := false;
+            }
+        }
+    }
+
+    public void f2() {
+        synchronized(this) {
+            bool temp := this.b;
+            if (!temp) {
+                // ok: b is false, setting to false
+                this.b := false;
+            }
+        }
+        yield;
+        synchronized(this) {
+            bool temp := this.b;
+            if (!temp) {
+                // ok: b is false, setting to false
+                this.b := false;
+            }
+        }
+    }
+
+}
+
+///: (45.13): Reduction failure
+///: (68.13): Reduction failure

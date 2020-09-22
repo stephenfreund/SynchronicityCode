@@ -1,0 +1,19 @@
+
+
+class Mutex {
+
+	int m     N;
+	int x     (this.m == 0 ? R : N);
+
+}
+
+///: (6.2): Mutex.x failed Write-Write Right-Mover Check
+///: (6.2): Mutex.x failed Write-Read Right-Mover Check
+///: (6.2): Mutex.x failed Read-Write Right-Mover Check
+
+///: (6.12): yields_as clause for Mutex.x is not transitive
+///: (6.12): yields_as clause for Mutex.x is not valid
+
+///: (6.2): Mutex.x is not Read-Write Stable with respect to Mutex.m (case F)
+///: (6.2): Mutex.x is not Write-Write Stable with respect to Mutex.m (case D)
+/// (6.2): Mutex.x is not Write-Write Stable with respect to Mutex.m (case M)

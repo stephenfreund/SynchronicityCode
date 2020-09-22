@@ -1,0 +1,57 @@
+///: ignore
+
+class Mutex {
+
+	int m   isLocal(this) ? (B # (((this.m == Tid.null && newValue == tid) ||
+                                       (this.m == tid && newValue == Tid.null)) ? B : E))
+                                : (  (casOK(this.m) ? R : N)
+                                        # (casOK(this.m) && ((this.m == Tid.null && newValue == tid) ||
+                                                                (this.m == tid && newValue == Tid.null)) ? N : E ));
+
+    void acq() {
+    assume isShared(this);
+        while (true)
+        {
+            int n := this.m;
+            yield;
+
+            if (n == Tid.null) {
+                bool x = this.m @ n :~ tid;
+                if (x) {
+                    assert this.m == tid;
+                    return;
+                }
+            }
+            yield;
+        }
+    }
+
+    void rel() {
+        assert this.m == tid;
+        this.m := Tid.null;
+    }
+}
+
+
+class Test {
+
+    Mutex m  readonly;
+    int x    this.m.m == tid ? B#B:E#E;
+
+    public void f() {
+        assert tid != Tid.null;
+        Mutex m := this.m;
+        invariant m == this.m;
+        assume m != Mutex.null && isShared(m);
+        m.acq();
+        assert this.m == m;
+        yield;
+        assert this.m == m;
+        assert this.m.m == tid;
+        this.x := 2;
+        m.rel();
+        this.x := 2;  // bad outside of crit section.
+    }
+}
+
+///: (53.9): Reduction failure

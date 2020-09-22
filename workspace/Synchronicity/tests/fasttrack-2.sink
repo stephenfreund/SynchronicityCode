@@ -1,0 +1,112 @@
+/* public vs. cooperable
+what does yield mean?
+purity vs CIVL model?
+Array types don't play nicely with inlining
+Do we want procedure specs?  ala public type system?
+*/
+
+class ThreadState {
+    array ThreadState_VC = int[tid == this.t ? B:E ]
+
+    array VarState_VC = int[(this.sxR != -1)
+                   ? guarded_by this
+                   : (((holds(this) || tid == index) ? B:E) # ((holds(this) && tid == index) ? B:E))]
+
+    Tid t readonly;
+    [ThreadState_VC] stV tid == this.t ? B:E;
+
+    int sxR  (this.sxR != -1) ? write_guarded_by this : (R#E);
+    int sxW  write_guarded_by this;
+
+    [VarState_VC] sxV (this.sxR != -1) ? guarded_by this : write_guarded_by this;
+
+
+    public bool write() {
+        assume tid == this.t;
+        int t := this.t;
+        [ThreadState_VC] stV := this.stV;
+        int e := stV[t];
+        int w := this.sxW;
+        if (w == e) { return true; }
+        yield;
+        synchronized(this) {
+            int ww := stV[w];
+            if (w > ww) { return false; }
+            int r := this.sxR;
+            if (r != -1) {
+                int rr := stV[r];
+                if (r > rr) { return false; }
+                this.sxW := e;
+            } else {
+                [VarState_VC] sxV := this.sxV;
+                int i = 0;
+                while (i < 10) {
+                    int v1 := stV[i];
+                    int v2 := sxV[i];
+                    if (v1 >= v2) {
+                        return false;
+                    }
+                }
+                this.sxW := e;
+            }
+        }
+        return true;
+    }
+
+
+    public bool read() {
+        assume tid == this.t;
+        assume !holds(this);
+        assume isShared(this.stV);
+        assume isShared(this.sxV);
+        int t := this.t;
+        [ThreadState_VC] stV := this.stV;
+        int e := stV[t];
+        assume e != -1;
+
+        ## assert _pc == PreCommit;
+
+        int r := this.sxR;
+        if (r == e) {
+            ## assert _pc == PostCommit;
+            return true;
+        } else {
+            if (r == -1) {
+                ## assert _pc == PreCommit;
+                //assert this.sxR == -1;
+                [VarState_VC] sxV := this.sxV;
+                ## assert _pc == PostCommit;
+                int sxVt;
+                if (t < sxV.length) {
+                    sxVt := sxV[t];
+                } else {
+                    sxVt = 0;
+                }
+                if (sxVt == e) { return true; }
+            }
+        }
+        yield;
+        synchronized(this) {
+            int w := this.sxW;
+            int ww := stV[w];
+            if (w > ww) { return false; }
+            r := this.sxR;
+            if (r != -1) {
+                int rr := stV[r];
+                if (r > rr) {
+                    this.sxR := e;
+                } else {
+                    [VarState_VC] sxV := this.sxV;
+                    sxV[r] := r;
+                    sxV[t] := e;
+                    this.sxR := -1;
+                }
+            } else {
+                    [VarState_VC] sxV := this.sxV;
+                    sxV[t] := e;
+            }
+        }
+        return true;
+    }
+
+}

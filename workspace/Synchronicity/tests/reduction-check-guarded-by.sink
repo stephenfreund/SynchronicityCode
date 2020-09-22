@@ -1,0 +1,36 @@
+// BAD
+
+class Cow {
+    int c1 isLocal(this) ? threadlocal : guarded_by this;
+
+    public void f() {
+        Cow c = new Cow();
+        int t;
+        synchronized(this) {
+            t:=c.c1;
+            t:=this.c1;
+        }
+    }
+
+    public void f2(Cow c) {
+        int t;
+        synchronized(this) {
+            t:=c.c1;
+            t:=this.c1;
+        }
+    }
+
+    requires this != c;
+    public void f3(Cow c) {
+        int t;
+        synchronized(this) {
+            synchronized(c) {
+                t:=c.c1;
+                t:=this.c1;
+            }
+        }
+    }
+
+}
+
+///: (18.13): Reduction failure

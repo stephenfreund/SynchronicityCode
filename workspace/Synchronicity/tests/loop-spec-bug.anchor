@@ -1,0 +1,191 @@
+/*
+
+ An Anchor implementation of the VerifiedFT-v2 algorithm from
+
+  VerifiedFT: A Verified, High-Performance Precise Dynamic Race Detector
+  James R. Wilcox, Cormac Flanagan, Stephen N. Freund
+  PPOPP, 2018
+
+ We refer the reader to that paper for a full discussion of the
+ synchronization and algorithm.
+
+ Notes:
+
+  * In the original, inheritance was used to create three specialized
+    versions of VectorClocks for ThreadState, VarState, LockState.  In
+    Anchor, we needed to duplicate the VectorClock code in each of the
+    three classes since there is no inheritance.
+
+  * Unlike the original, we include initializers for each of the
+    three main classes.
+
+  * We use array abbreviations in Anchor, which were not included in
+    the paper, eg:
+
+    array T = int[moves_as ...]
+
+    This instroduces an array type abbreviation that can be used
+    later, as in
+
+    [T] v = new [T](10);
+
+  * In array specs, the array object is referred to as "athis", and the
+    enclosing object is "this".
+
+  * We encode an ecoch tid@c as (tid + c * 256).  That is, the lower 8
+    bits of an int is the tid and the upper 24 is the clock.  We
+    assume no more than 255 threads will be used and that overflow
+    does not occur.  We use the constant -1 to represent the SHARED
+    special value.  This would be better implemented with bit-wise
+    operations, but Anchor doesn't support them.
+
+*/
+
+class Object { }
+
+class LockState {
+
+    Object target moves_as readonly;
+    array VC_LockState = int[moves_as  guarded_by this.target]
+
+    [VC_LockState] vc moves_as isLocal(this) ? threadlocal : guarded_by this.target;
+
+    invariant (forall int _i :: 0 <= _i && _i < this.vc.length ==> this.vc[_i] >= 0);
+    invariant isShared(this.target);
+    invariant isShared(this) ==> this.vc != null;
+
+    int get(int i) {
+    [VC_LockState] vc = this.vc;
+        return (i < vc.length) ? vc[i] : 0;
+    }
+
+    int size() {
+        return this.vc.length;
+    }
+}
+
+class ThreadState {
+
+    array VC_ThreadState =
+    int[
+
+    moves_as
+    isLocal(this) ?threadlocal
+                    :this.stopped ?(
+
+    isRead() ?B :E)
+            :(tid ==this.t ?B:E)]
+
+    array VC_Local =
+    int[
+
+    moves_as isRead() ?B :E]
+
+    volatile bool stopped
+
+    moves_as
+    isLocal(this) ?threadlocal :
+
+    isRead() ?(tid ==this.t ?B :(this.stopped ?R :N))
+            :(tid ==this.t &&!this.stopped &&newValue ?N :E);
+
+    Tid t  moves_as isLocal(this) ?threadlocal :readonly;
+
+    volatile [VC_ThreadState]
+    vc moves_as isLocal(this) ?threadlocal
+                    :this.stopped ?isRead() ?B :E
+                                   :(tid ==this.t ?B:E);
+
+    invariant(forall int _i::0<=_i&&_i<this.vc.length==>this.vc[_i]>=0);
+    invariant this.vc !=null;
+
+    int get(int i) {
+    [VC_ThreadState {
+            this
+        }]vc = this.vc;
+        return (i < vc.length) ? vc[i] : 0;
+    }
+
+    void set(int index, int value) {
+        this.ensureCapacity(index + 1);
+        this.vc[index] = value;
+    }
+
+    void ensureCapacity(int n) {
+    [VC_ThreadState]vc = this.vc;
+
+        if (n > vc.length) {
+      [VC_ThreadState]newVC = new[VC_ThreadState] (n);
+            for (int i = 0; i < n; i = i + 1)
+                invariant(forall int _i ::0 <= _i && _i < i ==>newVC[_i] == (_i < vc.length ? vc[_i] : 0));
+                 invariant isLocal(newVC);
+            {
+                newVC[i] = i < vc.length ? vc[i] : 0;
+            }
+            this.vc = newVC;
+        }
+    }
+
+
+    int size() {
+        return this.vc.length;
+    }
+
+    requires tid ==this.t;
+    requires !this.stopped;
+
+    requires holds(sm.target);
+
+    modifies this,this.vc;
+    ensures this.vc.length >= sm.vc.length;
+
+    ensures (forall int i :: 0 <= i && i < sm.vc.length ==> this.vc[i] == (old(i < this.vc.length && this.vc[i] > sm.vc[i]) ? this.vc[i] : sm.vc[i]));
+    ensures (forall int i :: sm.vc.length <= i && i < this.vc.length ==> this.vc[i] == (old(i < this.vc.length ? this.vc[i] : 0)));
+    public void acq(LockState sm) {
+    [VC_Local] oldVc = new [VC_Local](this.vc.length);  // spec
+    assume (forall int k :: oldVc[k] == this.vc[k]);  // spec
+        assume oldVc.length == this.vc.length;
+        int j = 0;
+        while (j < sm.size())
+            invariant j <= sm.vc.length;
+            invariant this.vc.length >= j;  // spec
+            invariant (forall int i :: 0 <= i && i < j ==> this.vc[i] ==
+                    (i < oldVc.length ? ((oldVc[i] > sm.vc[i]) ? oldVc[i] : sm.vc[i])  : sm.vc[i]));
+            invariant (forall int i :: j <= i && i < this.vc.length ==> this.vc[i] == (i < oldVc.length ? oldVc[i]: 0));
+
+        {
+            assert oldVc[j] == this.vc[j];
+            int e = epoch.max(this.get(j), sm.get(j));
+            this.set(j, e);
+            j = j + 1;
+        }
+    }
+}
+
+
+/*
+  Epoch contains the basic epoch operations, which are accessible through the
+  epoch global variable.  These would be static methods in Java...
+ */
+
+class Epoch {
+    int max(int v1, int v2) {
+        return (v1 > v2) ? v1 : v2;
+    }
+
+    int TID(int e) {
+        return e % 256;
+    }
+
+    bool LEQ(int e1, int e2) {
+        int v1 = this.TID(e1);
+        int v2 = this.TID(e2);
+        return v1 == v2 && e1 < e2;
+    }
+
+    int INC(int e) {
+        return e + 256;  // add 1 to the clock part of e
+    }
+}
+
+    Epoch epoch;

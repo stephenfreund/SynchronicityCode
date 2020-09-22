@@ -1,0 +1,12 @@
+
+class A {
+  volatile bool b moves_as whenever;
+
+  { } yield; { ensures $result; }
+  public bool f() {
+     assume this.b;
+     yield;
+     return this.b;
+     
+  }
+}

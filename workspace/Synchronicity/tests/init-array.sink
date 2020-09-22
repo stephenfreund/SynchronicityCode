@@ -1,0 +1,40 @@
+
+class Cow {
+
+    array Array = int[isLocal(this) ? threadlocal : readonly]
+
+    [Array{this}] elems  isLocal(this) ? threadlocal : readonly;
+
+    invariant this.elems != [Array{this}].null;
+    invariant forall int i :: 0 <= i && i < this.elems.length ==> this.elems[i] == i;
+
+
+    void init() {
+        [Array{this}] elems = new [Array{this}](16);
+
+        // init elems before storing into this, because storing causes the array to become shared...
+        for (int i = 0; i < 16; i = i + 1)
+            invariant forall int k :: 0 <= k && k < i ==> elems[k] == k;
+            invariant isLocal(elems);
+        {
+            elems[i] := i;
+        }
+        this.elems := elems;
+    }
+
+    int get(int i) {
+        [Array{this}] elems := this.elems;
+        int result := elems[i];
+        return result;
+    }
+
+}
+
+class Main {
+   public void main() {
+       Cow c = new Cow();
+       c.init();
+       int y = c.get(5);
+       assert y == 5;
+   }
+}

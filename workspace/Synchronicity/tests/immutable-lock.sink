@@ -1,0 +1,21 @@
+// OK
+
+class Cow {
+	int x 	guarded_by this.y;
+	Cow y   B#E;
+
+	invariant this.y != Cow.null;
+	
+	public void f() {
+	  assume this.y != Cow.null;
+		int xx = 0;
+		Cow y := this.y;
+		yield;
+		Cow this_y := this.y;
+		assert y == this_y;
+		synchronized(y) {
+			this.x := xx;
+		}
+	}
+}
+

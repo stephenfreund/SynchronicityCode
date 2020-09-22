@@ -1,0 +1,18 @@
+
+
+
+class Inc {
+
+	int value  moves_as  isLocal(this) ? threadlocal : (isRead ? B : E);
+
+	public void inc()  {
+		int x;
+    while (this.value < 10) {
+      x = x + 1;
+    }
+
+    assert this.value >= 10;
+	}
+}
+
+

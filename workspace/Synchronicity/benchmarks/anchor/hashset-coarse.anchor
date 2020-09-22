@@ -1,0 +1,225 @@
+
+class Lock { }
+
+class Node {
+    int item moves_as isLocal(this) ? threadlocal : readonly;
+    Node next moves_as isLocal(this) ? threadlocal : this.item < INT_MAX ? guarded_by this.mutex : readonly;
+    Lock mutex moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null ==> this.mutex == this.next.mutex;
+    invariant this.mutex != null;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == INT_MAX;
+
+    Node(int item, Lock mutex) {
+      this.item = item;
+      this.mutex = mutex;
+    }
+}
+
+class List {
+
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    Lock mutex moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.mutex != null;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+    invariant this.head.mutex == this.mutex;
+
+    List(Lock mutex) {
+      this.mutex = mutex;
+      Node tail = new Node(INT_MAX, mutex);
+      Node head = new Node(INT_MIN, mutex);
+      head.next = tail;
+      this.head = head;
+    }
+
+    bool add(int item) {
+        Node pred;
+        Node curr;
+        int key = item;
+            pred = this.head;
+            curr = pred.next;
+
+            while (curr.item < item)
+              invariant isShared(curr);
+              invariant isShared(pred);
+              invariant pred.item < item;
+              invariant pred.mutex == this.mutex;
+              invariant curr.mutex == this.mutex;
+            {
+                pred = curr;
+                curr = curr.next;
+            }
+            if(item == curr.item) {
+                return false;
+            } else {
+                Node node = new Node(item, this.mutex);
+                node.next = curr;
+                pred.next = node;
+                return true;
+            }
+    }
+
+    bool remove(int item) {
+        Node pred;
+        Node curr;
+            pred = this.head;
+            curr = pred.next;
+
+            while (curr.item < item)
+              invariant isShared(curr);
+              invariant isShared(pred);
+              invariant pred.item < item;
+              invariant pred.mutex == this.mutex;
+              invariant curr.mutex == this.mutex;
+            {
+                pred = curr;
+                curr = curr.next;
+            }
+            if(item == curr.item) {
+              pred.next = curr.next;
+              return true;
+            } else {
+              return false;
+            }
+    }
+
+
+    bool contains(int item) {
+       Node pred = this.head;
+       Node curr = pred.next;
+       while (curr.item < item)
+              invariant isShared(curr);
+              invariant curr.mutex == this.mutex;
+       {
+         pred = curr;
+         curr = curr.next;
+       }
+       return (item == curr.item);
+   }
+}
+
+
+class HashSet {
+
+    array T = List[moves_as isLocal(athis) ? B : readonly]
+
+    Lock mutex   moves_as isLocal(this) ? threadlocal : readonly;
+    [T] table   moves_as isLocal(this) ? threadlocal : guarded_by this.mutex;
+    int setSize moves_as isLocal(this) ? threadlocal : guarded_by this.mutex;
+
+    invariant this.mutex != null;
+    invariant this.table != null;
+    invariant (forall int i :: 0 <= i && i < this.table.length ==> this.table[i] != null && this.table[i].mutex == this.mutex);
+
+
+    public HashSet() {
+      int capacity = 16;
+      this.setSize = 0;
+      Lock mutex = new Lock();
+      [T] table = new [T](capacity);
+      this.mutex = mutex;
+      for (int i = 0; i < capacity; i = i + 1)
+        invariant (forall int j :: 0 <= j && j < i ==> table[j] != null && isShared(table[j]) && table[j].mutex == mutex);
+        invariant isShared(this.mutex);
+      {
+        List l = new List(mutex);
+        assert l.head != null && l.head.item == INT_MIN;  // needed for quantifiaction to work in boogie...
+        table[i] = l;
+      }
+      this.table = table;
+    }
+
+    void acq(int x) {
+      acquire(this.mutex);
+    }
+
+    void rel(int x) {
+      release(this.mutex);
+    }
+
+    requires INT_MIN < x && x < INT_MAX;
+    public bool contains(int x) {
+      this.acq(x);
+      int myBucket = x % this.table.length;
+      List l = this.table[myBucket];
+      bool result = l.contains(x);
+      this.rel(x);
+      return result;
+    }
+
+    requires INT_MIN < x && x < INT_MAX;
+    public bool add(int x) {
+      this.acq(x);
+      int myBucket = x % this.table.length;
+      List l = this.table[myBucket];
+      bool result = l.add(x);
+      if (result) {
+        l.add(x);
+        result = true;
+        this.setSize = this.setSize + 1;
+      }
+      if (this.policy()) {
+        this.resize();
+      }
+      this.rel(x);
+
+      return result;
+    }
+
+    requires INT_MIN < x && x < INT_MAX;
+    public bool remove(int x) {
+      this.acq(x);
+      int myBucket = x % this.table.length;
+      List l = this.table[myBucket];
+      bool result = l.remove(x);
+      if (result) {
+        this.setSize = this.setSize - 1;
+      }
+      this.rel(x);
+      return result;
+    }
+
+    bool policy() {
+      synchronized(this.mutex) {
+        return this.setSize / this.table.length > 4;
+      }
+    }
+
+    void resize() {
+       int oldCapacity = this.table.length;
+         if (oldCapacity != this.table.length) {
+           return;
+         }
+         int newCapacity = 2 * oldCapacity;
+         [T] oldTable = this.table;
+         [T] table = new [T](newCapacity);
+           for (int i = 0; i < newCapacity; i = i + 1)
+             invariant (forall int j :: 0 <= j && j < i ==> table[j] != null && isShared(table[j]) && table[j].mutex == this.mutex);
+             invariant isShared(this.mutex);
+           {
+             List l = new List(this.mutex);
+             table[i] = l;
+           }
+         this.table = table;
+         for (int i = 0; i < oldTable.length; i = i + 1) {
+           // skip over dummy nodes at front and end...
+           for (Node x = oldTable[i].head.next; x.next != null; x = x.next) {
+               int myBucket = x.item % this.table.length;
+               List l = this.table[myBucket];
+               l.add(x.item);
+           }
+         }
+    }
+}
+

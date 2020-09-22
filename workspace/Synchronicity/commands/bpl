@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mono ${ANCHOR_HOME}/boogie/Binaries/Boogie.exe  -useArrayTheory -errorTrace:1 -printModel:2 $*
+

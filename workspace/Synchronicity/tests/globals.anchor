@@ -1,0 +1,11 @@
+
+class Cow {
+  void f() {
+    c = new Cow();
+  }
+}
+
+Cow c;
+
+///: (4.5): Cannot assign to global.
+

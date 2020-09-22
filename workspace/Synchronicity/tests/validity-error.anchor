@@ -1,0 +1,11 @@
+
+
+class BadDiscipline {
+
+    volatile int value moves_as isRead() ? B : N;
+
+}
+
+///: (5.33): yields_as clause for BadDiscipline.value is not valid
+///: (5.5): BadDiscipline.value failed Read-Write Left-Mover Check
+///: (5.5): BadDiscipline.value failed Read-Write Right-Mover Check

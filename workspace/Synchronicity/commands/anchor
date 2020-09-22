@@ -1,0 +1,3 @@
+#!/bin/bash
+
+scala -J-Xmx12g -J-Xss40m -classpath ${ANCHOR_HOME}/bin anchor.tool.Anchor $*

@@ -1,0 +1,76 @@
+
+class A {
+    bool a moves_as isRead() ? B : E;
+    bool b moves_as isRead() ? B : E;
+    bool c moves_as isRead() ? B : E;
+
+
+
+    {
+        modifies $result;
+        ensures this.a ==> $result;
+        ensures !this.a && this.b ==> $result;
+    }
+    yield;
+    {
+        ensures this.c == $result;
+    }
+    public bool f() {
+        if (this.a) {
+            return true;
+        }
+        if (!this.a && this.b) {
+            return true;
+        }
+        yield;
+        if (!this.c) {
+            return false;
+        }
+        return true;
+    }
+
+    int spec;
+    {
+        ensures (this.a ==> $result);
+        ensures (!this.a && this.b ==> $result);
+        ensures spec == 1 ==> (this.c == $result);
+    }
+    public bool g() {
+        spec = 0;
+        if (this.a) {
+            return true;
+        }
+        if (!this.a && this.b) {
+            return true;
+        }
+        yield;
+        spec = 1;
+        if (!this.c) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+
+
+    {
+        ensures (this.a || !this.a && this.b ==> $result)
+            ||  ($result == this.c);
+    }
+    public bool gg() {
+        if (this.a) {
+            return true;
+        }
+        if (!this.a && this.b) {
+            return true;
+        }
+        yield;
+        if (!this.c) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+}

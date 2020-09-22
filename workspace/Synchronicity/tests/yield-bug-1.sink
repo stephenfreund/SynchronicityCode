@@ -1,0 +1,45 @@
+class A {
+
+
+  int x holds(this) ? B : E;
+
+
+  public void f1() {
+
+    synchronized (this) {
+
+      this.x := 3;
+
+    }
+
+    yield;
+    synchronized(this) {
+      int this_x := this.x;
+      assert this_x == 3; // Should Fail
+    }
+
+  }
+
+
+  public void f2() {
+
+    synchronized (this) {
+
+      this.x := 3;
+
+    }
+
+    yield;
+
+    yield;
+    synchronized(this) {
+      int this_x := this.x;
+      assert this_x == 3; // Fails as desired.
+    }
+
+  }
+
+}
+
+///: (18.7): This assertion may not hold.
+///: (37.7): This assertion may not hold.

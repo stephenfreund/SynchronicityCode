@@ -1,0 +1,113 @@
+
+class Node {
+    int value  moves_as isLocal(this) ? threadlocal : readonly;
+    Node next  moves_as isLocal(this) ? threadlocal : guarded_by this.owner;
+    Lock owner moves_as isLocal(this) ? threadlocal : readonly;
+
+
+    invariant this.next != null ==> this.owner == this.next.owner;
+    invariant this.owner != null;
+
+    Node(int value, Node next, Lock owner) {
+      this.value = value;
+      this.next = next;
+      this.owner = owner;
+    }
+}
+
+class Lock {
+
+}
+
+class Queue {
+
+    Lock enqLock moves_as readonly;
+    Lock deqLock moves_as isLocal(this) ? threadlocal : readonly;
+
+    Node head moves_as isLocal(this) ? threadlocal : guarded_by this.deqLock;
+    Node tail moves_as isLocal(this) ? threadlocal : guarded_by this.enqLock;
+
+    volatile int size moves_as isLocal(this) ? threadlocal : N;
+    int capacity moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.head != null;
+    invariant this.tail != null;
+    invariant this.enqLock != null;
+    invariant this.deqLock != null;
+
+    invariant this.head.owner == this.enqLock;
+
+    invariant this.capacity > 0;
+    invariant 0 <= this.size && this.size <= this.capacity;
+    invariant this.size > 0 ==> this.head != this.tail;
+
+    Queue() {
+        this.enqLock = new Lock();
+        this.deqLock = new Lock();
+        Node sentinel = new Node(0, null, this.enqLock);
+        this.head = sentinel;
+        this.tail = sentinel;
+        this.size = this.capacity;
+    }
+
+    int getAndDecSize() {
+      synchronized(this) {
+        int s = this.size;
+        this.size = s - 1;
+        return s;
+      }
+    }
+
+    int getAndIncSize() {
+      synchronized(this) {
+        int s = this.size;
+        this.size = s + 1;
+        return s;
+      }
+    }
+
+    public void enqueue(int value) {
+      bool mustWakeDequeuers = false;
+      synchronized(this.enqLock) {
+          while (true)
+            invariant holds(this.enqLock);
+          {
+            if (this.size > 0) {
+              break;
+            }
+            Lock mutex = this.enqLock;
+            wait(mutex);
+          }
+          Node e = new Node(value, null, this.enqLock);
+          Lock l = this.enqLock;
+          assert holds(l);
+          this.tail.next = e;
+          this.tail = e;
+          if (this.getAndDecSize() == this.capacity) {
+            mustWakeDequeuers = true;
+          }
+      }
+      yield;
+      if (mustWakeDequeuers) {
+        synchronized(this.deqLock) {
+          // deqLock.signalAll();
+        }
+      }
+    }
+
+/*    public int dequeue() {
+      synchronized(this) {
+        if (this.head.next == null) {
+          return -1;
+        } else {
+          this.head = this.head.next;
+          return this.head.value;
+        }
+      }
+    }
+    */
+}
+
+
+///: (84.11): Reduction failure
+/// -- only one error per method now... (54.20): Reduction failure

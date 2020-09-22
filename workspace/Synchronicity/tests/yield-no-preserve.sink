@@ -1,0 +1,15 @@
+// BAD
+
+class Cow {
+	int x 	whenever;
+	public void f() {
+		int xx = 0;
+		int yy;
+		this.x := xx;
+		yield;
+		yy := this.x;
+		assert xx == yy;
+	}
+}
+
+///: (11.3): This assertion may not hold.

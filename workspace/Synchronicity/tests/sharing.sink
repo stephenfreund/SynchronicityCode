@@ -1,0 +1,28 @@
+///: ignore
+
+class Node {
+  Node next guarded_by s;
+}
+
+class Stack {
+
+  Node top guarded_by this;
+
+  public void push(int v) {
+    assert isShared(this);
+//    assert isShared(this.top) || this.top == Node.null;
+    Node nu = new Node();
+    synchronized (this) {
+      Node next :=this.top;
+      assert next != nu;
+      assert isShared(next) || next == Node.null;
+      assert isLocal(nu);
+      if (next != Node.null) {
+          Node next_next := next.next;
+          assert next == Node.null || next_next != nu;
+      }
+    }
+  }
+}
+
+Stack s;

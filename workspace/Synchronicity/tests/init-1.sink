@@ -1,0 +1,57 @@
+
+class Key {
+}
+
+class Value {
+}
+
+class HashEntry {
+}
+
+class Segment {
+    array HashEntryArray = HashEntry[write_guarded_by this]
+
+    int count isLocal(this) ? threadlocal : write_guarded_by this;
+
+    int threshold whenever;
+
+    [HashEntryArray{this}] table isLocal(this) ? threadlocal : readonly;
+
+    invariant this.table != [HashEntryArray{this}].null;
+
+    void init() {
+        [HashEntryArray{this}] table = new [HashEntryArray{this}](16);
+        this.table := table;
+    }
+
+}
+
+class ConcurrentHashMap {
+
+    array SegmentArray = Segment[isLocal(this) ? threadlocal : readonly]
+
+    [SegmentArray{this}] segments  isLocal(this) ? threadlocal : readonly;
+
+    invariant forall int i :: 0 <= i && i < this.segments.length ==> this.segments[i] != Segment.null;
+
+
+    void init() {
+        [SegmentArray{this}] segments = new [SegmentArray{this}](16);
+        for (int i = 0; i < 16; i = i + 1)
+            invariant forall int k :: 0 <= k && k < i ==> segments[k] != Segment.null && isShared(segments[k]);
+        {
+            Segment seg = new Segment();
+            seg.init();
+            segments[i] := seg;
+        }
+        this.segments := segments;
+    }
+
+}
+
+class Main {
+    public void run() {
+        ConcurrentHashMap c = new ConcurrentHashMap();
+        c.init();
+    }
+}

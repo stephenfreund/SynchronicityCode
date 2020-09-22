@@ -1,0 +1,17 @@
+// OK
+
+class Cow {
+    int a0 tid == 1 ? B:E;
+    int a1 L#E;
+    int a2 N#N;
+    int a3 N#E;
+    int a4 tid == 2 ? B:E ;
+
+    int c0 holds(this) ? B#B : E#E;
+    int c1 threadlocal;
+    int c2 whenever;
+    int c3 readonly;
+    int c4 guarded_by this;
+    int c5 write_guarded_by this;
+
+}

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo Anchor Version
+javac -classpath .:compiled/ Benchmark.java
+java -classpath .:compiled/ Benchmark 20
+echo
+echo
+
+echo Java Version
+javac -classpath .:handwritten/ Benchmark.java
+java -classpath .:handwritten/ Benchmark 20
+

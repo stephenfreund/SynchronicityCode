@@ -1,0 +1,153 @@
+#define SIZE 16
+#define Inv(h,t)  (this.elems != null && this.elems.length == SIZE && 0 <= h && h < SIZE && 0 <= t && t < SIZE)
+#define INC(x)    ((x)==(SIZE-1) ? 0 : (x)+1)
+#define inOpenClosed(a,x,b)   ((a)<=(x) && (x)<(b))
+#define inHeadToTail(x)  (  this.head <= this.tail                \
+			    ? inOpenClosed(this.head,x,this.tail) \
+			    : (   inOpenClosed(this.head,x,SIZE)   \
+			       || inOpenClosed(0,x,this.tail)))
+#define newHead(x)       (inHeadToTail(x) || (x)==this.tail)
+#define inTailToHead(x)   (  this.tail < this.head                \
+			     ? inOpenClosed(this.tail,x,this.head) \
+			     : (   inOpenClosed(this.tail,x,SIZE) \
+			        || inOpenClosed(0,x,this.head)))
+
+
+class Queue {
+
+    array T = int[moves_as isLocal(this) ? B 
+                                         : Inv(this.head, this.tail) &&
+                                           (   (tid == 1 && inTailToHead(index))
+                                            || (tid == 2 && inHeadToTail(index))) ? B
+					                                          : E
+     ]
+
+    [T] elems moves_as isLocal(this) ? threadlocal : readonly;
+
+    volatile int tail
+      moves_as  isLocal(this) ? B
+                              : isRead() ? tid == 1 ? B
+	                                            : N
+	                                 : tid == 1 ? inTailToHead(newValue) ? N : E
+					       	    : E
+      yielding ((tid == 1 || tid == 2) && Inv(this.head, this.tail))
+               ==>
+	       (   Inv(this.head, newValue)
+		   && tid==1 ==> this.tail==newValue
+		   && tid==2 ==> inTailToHead(newValue));
+				
+    volatile int head
+      moves_as  isLocal(this) ? B
+	                      : isRead() ? tid == 2 ? B
+	                                            : N
+    	                                 : tid == 2 ? (newHead(newValue) ? N : E)
+	                                            : E
+	yielding ((tid == 1 || tid == 2) && Inv(this.head, this.tail))
+	       ==>
+               (   Inv(newValue, this.tail)
+		&& tid==2 ==> this.head==newValue
+ 	        && tid==1 ==> newHead(newValue));
+
+    ghost Seq<int> spec moves_as isLocal(this) ? B : E;
+
+    invariant Inv(this.head, this.tail);
+    invariant SeqLen(this.spec) == ((this.head <= this.tail) ? (this.tail-this.head) : (SIZE + this.tail - this.head));
+    invariant this.head==this.tail ==> SeqLen(this.spec)==0;
+    invariant this.head <= this.tail ==>
+              (forall int i :: { this.elems[i] }
+                      this.head <= i && i < this.tail  ==> (this.elems[i] == SeqNth(this.spec, i - this.head)));
+    invariant this.tail < this.head ==>
+              (forall int i :: { this.elems[i] }
+                        this.head <= i && i < SIZE      ==> (this.elems[i] == SeqNth(this.spec, i - this.head)));
+    invariant this.tail < this.head ==>
+              (forall int i :: { this.elems[i] }
+                        0 <= i && i < this.tail        ==> (this.elems[i] == SeqNth(this.spec, i + SIZE - this.head)));
+    
+    ensures this.spec == SeqEmpty<int>();
+    public Vector() {
+      //this.spec = SeqEmpty<int>();
+        this.elems = new [T](SIZE);
+    }
+
+    requires tid == 1;
+    modifies this, this.elems;  
+    ensures this.spec == old(this.spec) || (this.spec == SeqConcat(old(this.spec), SeqUnit(x)));
+    public void enqueue(int x) {
+      int h=this.head; int t=this.tail;
+      if ( INC(t)==h ) {
+	// FULL
+      } else {
+            yield;
+            this.elems[this.tail] = x;
+            this.spec = SeqConcat(this.spec, SeqUnit(x));
+	    int t2=this.tail;
+            this.tail = INC(t2);
+        }
+    }
+    
+
+    requires tid == 2;
+    modifies this, this.elems; 
+    ensures ($result == 0 && this.spec == old(this.spec))
+            || ($result == old(SeqNth(this.spec, 0)) && this.spec == SeqExtract(old(this.spec), 1, SeqLen(old(this.spec))-1));
+    
+    public int dequeue() {
+        if (this.head != this.tail) {
+            yield;
+            int result = this.elems[this.head];
+            this.spec = SeqExtract(this.spec, 1, SeqLen(this.spec)-1);
+	    int h=this.head;
+            this.head = INC(h);
+            return result;
+        } else {
+            return 0;
+        }
+	}
+    
+}
+
+/*
+axiom (forall int a :: { (SIZE + a) % SIZE } 0 <= a && a < SIZE ==> (SIZE + a)%SIZE == a);
+axiom SIZE % SIZE == 0;
+axiom (SIZE % SIZE) % SIZE == 0;
+
+axiom (forall int x, int y :: { (SIZE + y - x) % SIZE, (y + 1) % SIZE != x }
+        0 <= x && x < SIZE &&
+        0 <= y && y < SIZE &&
+        (y + 1) % SIZE != x
+        ==> 0 <= (SIZE + y - x) % SIZE && (SIZE + y - x) % SIZE < 511);
+
+
+axiom (forall int x, int y :: { (SIZE + y - (x + 1) % SIZE) % SIZE }
+    0 <= x && x < SIZE &&
+    0 <= y && y < SIZE &&
+    y != x
+    ==> (SIZE + y - x) % SIZE - 1 == (SIZE + y - (x + 1) % SIZE) % SIZE);
+
+
+axiom (forall int x, int y :: {  (SIZE + (y + 1) % SIZE - x) % SIZE }
+    0 <= x && x < SIZE &&
+    0 <= y && y < SIZE &&
+    (y + 1) % SIZE != x
+    ==> (SIZE + y - x) % SIZE + 1 == (SIZE + (y + 1) % SIZE - x) % SIZE);
+*/
+
+
+/*
+
+axiom SIZE % SIZE == 0;
+axiom 0 % SIZE == 0;
+axiom (forall int a :: { a % SIZE } 0 <= a ==> 0 <= (a % SIZE) && (a % SIZE) < SIZE);
+axiom (forall int a :: { a % SIZE } 0 <= a && a< SIZE==> (a % SIZE) == a);
+axiom (forall int h, int t :: //{  ((SIZE + (t + 1) % SIZE) - h) % SIZE }
+       { ((SIZE + t - h) % SIZE) + 1 }
+    0 <= h && h < SIZE &&
+    0 <= t && t < SIZE &&
+    (t + 1) % SIZE != h
+    ==> ((SIZE + t - h) % SIZE) + 1 == (SIZE + (t + 1) % SIZE - h) % SIZE);
+axiom (forall int h, int t :: { ((SIZE + t - h) % SIZE) - 1 }
+    0 <= h && h < SIZE &&
+    0 <= t && t < SIZE &&
+    t != h
+    ==> ((SIZE + t - h) % SIZE) - 1 == (SIZE + t - (h + 1) % SIZE) % SIZE);
+*/

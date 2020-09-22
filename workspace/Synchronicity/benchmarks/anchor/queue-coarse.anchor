@@ -1,0 +1,57 @@
+
+class Node {
+    int value   moves_as isLocal(this) ? threadlocal : readonly;
+    Node next   moves_as isLocal(this) ? threadlocal : guarded_by this.owner;
+    Queue owner moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null ==> this.owner == this.next.owner;
+    invariant this.owner != null;
+
+    Node(int value, Node next, Queue owner) {
+      this.value = value;
+      this.next = next;
+      this.owner = owner;
+    }
+}
+
+class Queue {
+
+    Node head moves_as isLocal(this) ? threadlocal : guarded_by this;
+    Node tail moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+    invariant this.head != null;
+    invariant this.tail != null;
+
+    invariant this.head.owner == this;
+    invariant this.tail.owner == this;
+
+    public Queue() {
+        synchronized(this) {
+          Node head = new Node(0, null, this);
+          this.head = head;
+          this.tail = head;
+        }
+    }
+
+    public void enqueue(int value) {
+      synchronized(this) {
+        Node n = new Node(value, null, this);
+        this.tail.next = n;
+        this.tail = n;
+      }
+    }
+
+    public int dequeue() {
+      synchronized(this) {
+        if (this.head.next == null) {
+          return -1;
+        } else {
+          int result = this.head.next.value;
+          this.head = this.head.next;
+          return result;
+        }
+      }
+    }
+
+}
+

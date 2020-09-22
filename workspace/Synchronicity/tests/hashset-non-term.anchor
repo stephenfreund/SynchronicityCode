@@ -1,0 +1,78 @@
+
+class Lock { }
+
+
+class Node {
+    int item moves_as isLocal(this) ? threadlocal : readonly;
+    Node next moves_as isLocal(this) ? threadlocal : this.item < INT_MAX ? guarded_by this.mutex : readonly;
+    Lock mutex moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null ==> this.mutex == this.next.mutex;
+    invariant this.mutex != null;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == INT_MAX;
+
+}
+
+class List {
+
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    Lock mutex moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.mutex != null;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+    invariant this.head.mutex == this.mutex;
+}
+
+
+class HashSet {
+
+    array LOCK = Lock[moves_as isLocal(athis) ? B : readonly]
+
+    [LOCK] mutexs  moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.mutexs != null;
+    invariant this.mutexs.length > 0;
+    invariant (forall int i :: 0 <= i && i < this.mutexs.length ==> this.mutexs[i] != null);
+    invariant (forall int i, int j :: 0 <= i && i < this.mutexs.length &&
+                                      0 <= j && j < this.mutexs.length &&
+                                      this.mutexs[i] == this.mutexs[j]
+                                    ==> i == j);
+
+    void acq(int x) {
+      acquire(this.mutexs[x % this.mutexs.length]);
+    }
+
+    void rel(int x) {
+      release(this.mutexs[x % this.mutexs.length]);
+    }
+
+
+    public void resize() {
+      for (int i = 0; i < this.mutexs.length; i = i + 1)
+         invariant (forall int j :: 0 <= j && j < i ==> holds(this.mutexs[j]));
+       {
+         acquire(this.mutexs[i]);
+       }
+
+       commit;
+
+      for (int i = 0; i < this.mutexs.length; i = i + 1)
+         invariant (forall int j :: i <= j && j < this.mutexs.length ==> holds(this.mutexs[j]));
+         decreases this.mutexs.length - i;
+      {
+        release(this.mutexs[i]);
+      }
+
+
+    }
+}

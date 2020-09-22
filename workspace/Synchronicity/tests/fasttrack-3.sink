@@ -1,0 +1,113 @@
+/* public vs. cooperable
+what does yield mean?
+purity vs CIVL model?
+Array types don't play nicely with inlining
+Do we want procedure specs?  ala public type system?
+*/
+
+class VarState {
+    array VarState_VC = int[(this.read != -1)
+                   ? guarded_by this
+                   : (((holds(this) || tid == index) ? B:E) # ((holds(this) && tid == index) ? B:E))]
+
+
+    int read  (this.read != -1) ? write_guarded_by this : (R#E);
+    int write  write_guarded_by this;
+    [VarState_VC] readVC (this.read != -1) ? guarded_by this : write_guarded_by this;
+
+}
+
+class ThreadState {
+
+    array ThreadState_VC = int[tid == this.t ? B:E ]
+
+    Tid t                   readonly;
+    [ThreadState_VC] stV    tid == this.t ? B:E;
+
+    public bool write(VarState sx) {
+        assume tid == this.t;
+        assume isShared(this.stV);
+
+        int t := this.t;
+        [ThreadState_VC] stV := this.stV;
+        int e := stV[t];
+        int w := sx.write;
+        if (w == e) { return true; }
+        yield;
+        synchronized(sx) {
+            int ww := stV[w];
+            if (w > ww) { return false; }
+            int r := sx.read;
+            if (r != -1) {
+                int rr := stV[r];
+                if (r > rr) { return false; }
+                sx.write := e;
+            } else {
+                [VarState.VarState_VC{sx}] readVC := sx.readVC;
+                int i = 0;
+                while (i < 10) {
+                    int v1 := stV[i];
+                    int v2 := readVC[i];
+                    if (v1 >= v2) {
+                        return false;
+                    }
+                }
+                sx.write := e;
+            }
+        }
+        return true;
+    }
+
+    public bool read(VarState sx) {
+        assume tid == this.t;
+        assume !holds(this);
+        assume isShared(this.stV);
+        assume isShared(sx.readVC);  // != null
+        int t := this.t;
+        [ThreadState_VC] stV := this.stV;
+        int e := stV[t];
+        assume e != -1;
+
+        ## assert _pc == PreCommit;
+        int r := sx.read;
+        if (r == e) {
+            return true;
+        } else {
+            if (r == -1) {
+                ## assert _pc == PreCommit;
+                //assert sx.read == -1;
+                [VarState.VarState_VC{sx}] readVC := sx.readVC;
+                int readVCt;
+                if (t < readVC.length) {
+                    readVCt := readVC[t];
+                } else {
+                    readVCt = 0;
+                }
+                if (readVCt == e) { return true; }
+            }
+        }
+        yield;
+        synchronized(sx) {
+            int w := sx.write;
+            int ww := stV[w];
+            if (w > ww) { return false; }
+            r := sx.read;
+            if (r != -1) {
+                int rr := stV[r];
+                if (r > rr) {
+                    sx.read := e;
+                } else {
+                    [VarState.VarState_VC{sx}] readVC := sx.readVC;
+                    readVC[r] := r;
+                    readVC[t] := e;
+                    sx.read := -1;
+                }
+            } else {
+                    [VarState.VarState_VC{sx}] readVC := sx.readVC;
+                    readVC[t] := e;
+            }
+        }
+        return true;
+    }
+
+}

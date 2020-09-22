@@ -1,0 +1,54 @@
+
+
+class Ref {
+    Node reference    moves_as isLocal(this) ? threadlocal : readonly;
+    bool mark         moves_as isLocal(this) ? threadlocal : readonly;
+}
+
+class AtomicMarkableReference {
+
+    volatile Ref pair  moves_as isLocal(this) ? threadlocal : N;
+
+    invariant this.pair != null;
+
+}
+
+
+class Node {
+    int item moves_as isLocal(this) ? threadlocal : readonly;
+    AtomicMarkableReference next moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant (forall Node n :: n != this ==> n.next != this.next);
+
+    invariant this.next != null;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next.pair.reference != null ==> this.item < this.next.pair.reference.item;
+
+}
+
+class List {
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+
+    // must have at least two nodes...
+    invariant this.head.next.pair.reference != null;
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool add(int item) {
+      while (true) {
+
+        assert false;
+
+      }
+    }
+
+}
+
+///: (47.9): This assertion may not hold.

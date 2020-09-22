@@ -1,0 +1,32 @@
+
+
+class AtomicIncAndDec {
+
+    volatile int n  moves_as N;
+
+    modifies this;
+    ensures this.n == old(this.n) + 1;
+    public void inc() {
+        while (true) {
+            int x = this.n;
+            yield;
+            if (cas(this,n,x,x+1)) {
+                break;
+            }
+            yield;
+        }
+    }
+
+    modifies this;
+    ensures this.n == old(this.n) - 1;
+    public void dec() {
+        while (true) {
+            int x = this.n;
+            yield;
+            if (cas(this,n,x,x-1)) {
+                break;
+            }
+            yield;
+        }
+    }
+}

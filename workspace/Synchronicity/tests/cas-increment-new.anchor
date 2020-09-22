@@ -1,0 +1,58 @@
+
+
+class Inc {
+
+	noABA volatile int counter  moves_as isRead() ? N : (newValue == this.counter + 1 ? N : E)
+	  yields_as newValue >= this.counter;
+
+    public void inc() {
+        bool z = true; while (z)
+        {
+            int n = this.counter;
+            bool x = cas(this,counter,n,n+1);
+            if (x) {
+                break;
+            }
+            yield;
+        }
+    }
+}
+
+class Inc2 {
+
+	volatile int counter  moves_as isRead() ? N : (newValue == this.counter + 1 ? N : E)
+	  yields_as newValue >= this.counter;
+
+    public void inc() {
+        bool z = true; while (z)
+        {
+            int nnn = this.counter;
+            bool x = cas(this,counter,nnn,nnn+1);
+            if (x) {
+                break;
+            }
+            yield;
+        }
+    }
+}
+
+class Inc3 {
+
+	noABA volatile int counter  moves_as isRead() ? N : (newValue == this.counter + 1 ? N : E)
+	  yields_as newValue >= this.counter;
+
+    public void inc() {
+        bool z = true; while (z)
+        {
+            int n = this.counter;
+            yield;
+            bool x = cas(this,counter,n,n+1);
+            if (x) {
+                break;
+            }
+            yield;
+        }
+    }
+}
+
+///: (30.13): Reduction failure

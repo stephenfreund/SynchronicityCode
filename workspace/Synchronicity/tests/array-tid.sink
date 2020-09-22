@@ -1,0 +1,66 @@
+class Cow {
+
+    array T = int[index == tid ? B:E]
+
+    [T] a readonly;
+
+    public void f() {
+        [T] a := this.a;
+        yield;
+        assume 3 < a.length;
+        int x = 3;
+        a[tid] := x;
+        x = tid;
+        a[x] := x;
+        x = 0;
+        a[x] := x;
+    }
+
+    public void g() {
+        [T] a := this.a;
+        yield;
+        assume 3 < a.length;
+        int x = 3;
+        a[tid] := x;
+        yield;
+        int y := a[tid];
+        assert y == x;
+    }
+
+    public void h() {
+        [T] a := this.a;
+        [T] b;
+        int s = 10;
+        b = new [T](s);
+        assert a != b;
+    }
+
+    public void j() {
+        [T] a := this.a;
+        [T] b;
+        b := this.a;
+        assert a == b;
+    }
+
+    public void k([T] a, [T] b) {
+        int x = 0;
+        int y = 1;
+        a[tid] := x;
+        b[tid] := y;
+        int z := a[tid];
+        assert z == x;
+    }
+
+    public void k2([T] a, [T] b) {
+       assume a != b;
+        int x = 0;
+        int y = 1;
+        a[tid] := x;
+        b[tid] := y;
+        int z := a[tid];
+        assert z == x;
+    }
+}
+
+///: (16.9): Reduction failure
+///: (51.9): This assertion may not hold.

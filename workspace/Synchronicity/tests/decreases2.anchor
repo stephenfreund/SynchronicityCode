@@ -1,0 +1,59 @@
+
+class Lock { }
+
+class HashSet {
+
+    array LOCK = Lock[moves_as isLocal(athis) ? B : readonly]
+    [LOCK] locks  moves_as  isLocal(this) ? threadlocal : readonly;
+
+    invariant this.locks != null;
+    invariant this.locks.length > 0;
+    invariant (forall int i :: 0 <= i && i < this.locks.length ==> this.locks[i] != null);
+    invariant (forall int i, int j :: 0 <= i && i < this.locks.length &&
+                                      0 <= j && j < this.locks.length &&
+                                      this.locks[i] == this.locks[j]
+                                    ==> i == j);
+
+
+
+    public void resize() {
+       for (int i = 0; i < this.locks.length; i = i + 1)
+         invariant (forall int j :: 0 <= j && j < i ==> holds(this.locks[j]));
+       {
+         acquire(this.locks[i]);
+       }
+
+commit;
+
+      for (int i = 0; i < this.locks.length; i = i + 1)  // bad!
+         invariant (forall int j :: i <= j && j < this.locks.length ==> holds(this.locks[j]));
+      {
+        release(this.locks[i]);
+      }
+
+
+    }
+
+    public void resize2() {
+       for (int i = 0; i < this.locks.length; i = i + 1)
+         invariant (forall int j :: 0 <= j && j < i ==> holds(this.locks[j]));
+       {
+         acquire(this.locks[i]);
+       }
+
+      commit;  // force to Post for loop head
+
+      for (int i = 0; i < this.locks.length; i = i + 1)
+         decreases this.locks.length - i;
+         invariant (forall int j :: i <= j && j < this.locks.length ==> holds(this.locks[j]));
+      {
+        release(this.locks[i]);
+      }
+
+
+    }
+
+
+}
+
+///: (28.25): Potentially infinite loop head cannot be in post-commit phase.

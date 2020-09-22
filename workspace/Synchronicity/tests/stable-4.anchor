@@ -1,0 +1,28 @@
+
+
+class Example {
+
+  Tid owner  moves_as readonly;
+
+	volatile bool flag  moves_as isRead ? this.flag ? R : N
+	                  : tid == this.owner && !this.flag ? N : E;
+	volatile int data   moves_as isRead ? this.flag ? R : E
+	                  : tid == this.owner && !this.flag ? B : E;
+
+  requires tid == this.owner;
+  requires !this.flag;
+  public Example() {
+     this.data = 3;
+     this.flag = true;
+  }
+
+  public int read() {
+    if (this.flag) {
+      return this.data;
+    } else {
+      return 0;
+    }
+  }
+}
+
+///: (13.12): Can only have right-mover memory accesses in requires clause

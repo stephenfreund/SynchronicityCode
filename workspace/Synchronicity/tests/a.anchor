@@ -1,0 +1,18 @@
+
+class A {
+  volatile A x moves_as isRead ? N
+                               : isLocal(newValue) ? N : E
+               yields_as this.x == newValue || (!isLocal(newValue) && !isShared(newValue))
+               ;
+
+  public void f() {
+    assume this.x != null;
+    A a = this.x;
+    yield;
+    A b = this.x;
+    yield;
+    A c = this.x;
+    assert (a == b && b == c) || (a != c);
+
+  }
+}

@@ -1,0 +1,42 @@
+
+class Example {
+
+  int value  moves_as guarded_by this;
+
+  public void assertMustObeyDiscipline()  {
+    int oldValue;
+    synchronized(this) {
+      oldValue = this.value;
+      this.value = oldValue + 1;
+    }
+    assert this.value > oldValue;
+  }
+
+  public void howToHandleAssumes()  {
+    int oldValue;
+    synchronized(this) {
+      oldValue = this.value;
+      this.value = oldValue + 1;
+    }
+
+    synchronized(this) {
+      assert this.value > oldValue;
+    }
+  }
+
+  public void assertionFailure()  {
+    int oldValue;
+    synchronized(this) {
+      oldValue = this.value;
+      this.value = oldValue + 1;
+    }
+    yield;
+    synchronized(this) {
+      assert this.value > oldValue;
+    }
+  }
+}
+
+///: (12.5): Reduction failure
+///: (22.18): Reduction failure
+///: (35.7): This assertion may not hold.

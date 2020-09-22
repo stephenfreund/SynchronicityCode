@@ -1,0 +1,36 @@
+
+
+class Cow {
+    public void f() {
+        Map<int,int> s;
+        s = MapEmpty<int,int>();
+        s = MapStore(s,4,2);
+        assert MapSelect(s,4) == 2;
+    }
+
+    public void g() {
+        Map<int,int> s;
+        s = MapEmpty<int,int>();
+        s = MapStore(s,4,2);
+        assert MapSelect(s,4) != 2;
+    }
+
+    public void h() {
+        Map<int,Cow> s;
+        s = MapEmpty<int,Cow>();
+        s = MapStore(s,4,this);
+        assert MapSelect(s,4) != this;
+    }
+
+    public void h2() {
+        Map<int,Map<Cow,Cow>> s;
+        s = MapEmpty<int,Map<Cow,Cow>>();
+        s = MapStore(s, 2, MapEmpty<Cow,Cow>());
+        assert MapSelect(s, 2) == MapEmpty<Cow,Cow>();
+    }
+
+
+}
+
+///: (15.9): This assertion may not hold.
+///: (22.9): This assertion may not hold.

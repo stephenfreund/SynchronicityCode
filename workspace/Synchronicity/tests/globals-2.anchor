@@ -1,0 +1,8 @@
+
+class Cow2 {
+  Cow2(int x) { }
+}
+
+Cow2 c2;
+
+///: (6.1): Global object must have 0-ary constructor.

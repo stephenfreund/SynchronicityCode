@@ -1,0 +1,43 @@
+///: ignore
+
+class Cow {
+	int x 	guarded_by this;
+
+	public void f() {
+		int xx = 0;
+		int yy;
+		synchronized(this) {
+			this.x := xx;
+			yield ensures this.x == xx;
+			yy := this.x;
+			assert xx == yy;
+		}
+	}
+
+	public void f2() {
+		yield ensures false;
+	}
+
+	public void f3() {
+		int xx = 0;
+		int yy;
+		synchronized(this) {
+			this.x := xx;
+		}
+    	yield ensures this.x == xx;
+		synchronized(this) {
+			yy := this.x;
+		}
+	}
+
+	public void f4() {
+		int xx = 0;
+		int yy;
+		synchronized(this) {
+        	yield ensures old(this.x) == this.x;
+		}
+        yield ensures old(this.x) == this.x;
+	          ensures old(this.x) == this.x+1;
+	    }
+
+}

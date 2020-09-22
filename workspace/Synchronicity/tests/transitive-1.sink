@@ -1,0 +1,8 @@
+// OK
+
+class Cow {
+
+	int x whenever;
+}
+
+// Inc global;

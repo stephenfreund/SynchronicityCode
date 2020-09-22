@@ -1,0 +1,20 @@
+///: ignore
+class Cow {
+
+  int x N;
+
+  public void f() {
+    int x;
+    if (this.x < 10) {
+      this.x := 2;
+    }
+  }
+
+  public void g() {
+    int x;
+    while (this.x < 10) {
+      this.x := 2;
+    }
+  }
+
+}

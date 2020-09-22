@@ -1,0 +1,267 @@
+///: ignore
+
+class Pair {
+    Node reference    moves_as isLocal(this) ? threadlocal : readonly;
+    bool mark         moves_as isLocal(this) ? threadlocal : readonly;
+    Pair(Node reference, bool mark) {
+        this.reference = reference;
+        this.mark = mark;
+    }
+}
+
+class AtomicMarkableReference {
+
+    int item  moves_as isLocal(this) ? threadlocal : readonly;
+    volatile Pair pair  moves_as isLocal(this) ? threadlocal : cas;
+
+    invariant this.pair != null;
+    invariant this.pair.reference != null ==> this.item < this.pair.reference.item;
+
+    Pair pairOf(Node initialRef, bool initialMark) {
+      Pair p = new Pair(initialRef, initialMark);
+      return p;
+    }
+
+    AtomicMarkableReference(int item, Node initialRef, bool initialMark) {
+        this.item = item;
+        this.pair = this.pairOf(initialRef, initialMark);
+    }
+
+    Node getReference() {
+        return this.pair.reference;
+    }
+
+    bool isMarked() {
+        return this.pair.mark;
+    }
+
+    Pair get() {
+        return this.pair;
+    }
+
+    bool compareAndSet(Node      expectedReference,
+                     Node       newReference,
+                     bool expectedMark,
+                     bool newMark) {
+
+        Pair current = this.pair;
+        return
+            expectedReference == current.reference &&
+            expectedMark == current.mark &&
+            ((newReference == current.reference &&
+             newMark == current.mark) ||
+             this.casPair(current, this.pairOf(newReference, newMark)));
+    }
+
+    void set(Node newReference, bool newMark) {
+       Pair current = this.pair;
+       if (newReference != current.reference || newMark != current.mark)  {
+          this.pair = this.pairOf(newReference, newMark);
+       }
+    }
+
+    bool attemptMark(Node expectedReference, bool newMark) {
+        Pair current = this.pair;
+        return
+            expectedReference == current.reference &&
+            (newMark == current.mark ||
+             this.casPair(current, this.pairOf(expectedReference, newMark)));
+    }
+
+    bool casPair(Pair cmp, Pair val) {
+        return cas(this, pair, cmp, val);
+    }
+}
+
+
+class Node {
+    int item isLocal(this) ? threadlocal : readonly;
+    AtomicMarkableReference next isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null;
+    invariant this.item == this.next.item;
+
+//    invariant (forall Node n :: (n != null && n.next == this.next) ==> n == this);
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next.pair.reference != null ==> this.item < this.next.pair.reference.item;
+    invariant (this.next.pair.reference == null) == (this.item == INT_MAX);
+
+    invariant this.next.pair.mark ==> (INT_MIN < this.item && this.item < INT_MAX);
+
+    Node(int item, Node ref, bool marked) {
+      this.item = item;
+      AtomicMarkableReference r = new AtomicMarkableReference(item, ref, marked);
+      this.next = r;
+    }
+}
+
+class Window {
+  Node pred threadlocal;
+  Node curr threadlocal;
+  Window(Node pred, Node curr) {
+    this.pred = pred;
+    this.curr = curr;
+  }
+}
+
+class List {
+
+    Node head isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+
+    // must have at least two nodes...
+    invariant this.head.next.pair.reference != null;
+
+    public List() {
+      Node tail = new Node(INT_MAX, null, false);
+      Node head = new Node(INT_MIN, tail, false);
+      this.head = head;
+    }
+
+
+    Window findHelper(int item) {
+      Node pred = this.head;
+      Pair currPair = pred.next.get();
+      Node curr = currPair.reference;
+
+      yield;
+
+      while (true)
+        invariant isShared(curr);
+        invariant isShared(pred);
+        invariant pred.item < item;
+        invariant curr.item <= INT_MAX;
+        invariant pred.item < curr.item;
+      {
+
+        Pair succPair = curr.next.get();
+        Node succ = succPair.reference;
+        bool marked = succPair.mark;
+
+        yield;
+
+        while (marked)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant marked ==> isShared(succ);
+          invariant marked ==> curr.item < INT_MAX;
+          invariant marked ==> curr.item < succ.item;
+          invariant !marked ==> (isShared(succ) && curr.item < succ.item) || (succ == null && curr.item == INT_MAX);
+          invariant pred.item < item;
+          invariant pred.item < curr.item;
+          invariant succ != null ==> curr.item < succ.item;
+        {
+          yield;
+
+          bool snip = pred.next.compareAndSet(curr, succ, false, false);
+
+          if (!snip) {
+            return null;
+          }
+
+          yield;
+
+          curr = succ;
+          succPair = curr.next.get();
+          succ = succPair.reference;
+          marked = succPair.mark;
+
+          yield;
+
+        }
+
+        if (curr.item >= item) {
+          Window w = new Window(pred, curr);
+          return w;
+        } else {
+          pred = curr;
+          curr = succ;
+        }
+
+        yield;
+
+      }
+    }
+
+
+
+    //requires INT_MIN < item && item < INT_MAX;
+    Window find(int item) {
+      yield;
+      while (true) {
+        Window w = this.findHelper(item);
+        if (w != null) {
+          assert w.pred.item < item && item <= w.curr.item;
+          return w;
+        }
+        yield;
+      }
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool add(int item) {
+      while (true) {
+        Window window = this.find(item);
+        Node pred = window.pred;
+        Node curr = window.curr;
+        if (curr.item == item) {
+          return false;
+        } else {
+          Node node = new Node(item, curr, false);
+          if (pred.next.compareAndSet(curr, node, false, false)) {
+            return true;
+          }
+        }
+        yield;
+      }
+    }
+
+
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool remove(int item) {
+      while (true) {
+        Window window = this.find(item);
+        Node pred = window.pred;
+        Node curr = window.curr;
+        if (curr.item != item) {
+          return false;
+        } else {
+          Pair succResult = curr.next.get();
+          Node succ = succResult.reference;
+
+          yield;
+          bool snip = curr.next.compareAndSet(succ, succ, false, true);
+          if (snip) {
+            yield;
+            if (pred.next.compareAndSet(curr, succ, false, false)) {
+              return true;
+            }
+          }
+        }
+        yield;
+      }
+    }
+
+
+     requires INT_MIN < item && item < INT_MAX;
+     public bool contains(int item) {
+         Node curr = this.head;
+         yield;
+         while (curr.item < item)
+           invariant isShared(curr);
+         {
+           Pair currPair = curr.next.get();
+           curr = currPair.reference;
+           yield;
+         }
+         Pair currPair2 = curr.next.get();
+         return curr.item == item && !currPair2.mark;
+    }
+}

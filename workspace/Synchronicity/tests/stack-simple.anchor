@@ -1,0 +1,64 @@
+// hand-over-hand locking.
+
+class Node {
+    int item  moves_as isLocal(this) ? threadlocal : readonly;
+    Node next moves_as isLocal(this) ? threadlocal : readonly;
+
+    Node(int item, Node next) {
+      this.item = item;
+      this.next = next;
+    }
+}
+
+
+class Stack {
+
+    Node head moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+    public int push(int item) {
+        acquire(this);
+        Node node = new Node(item, this.head);
+        this.head = node;
+        release(this);
+    }
+
+    public int pop() {
+      int value;
+      acquire(this);
+      if (this.head != null) {
+        value = this.head.item;
+        this.head = this.head.next;
+      } else {
+        value = -1;
+      }
+      release(this);
+      return value;
+    }
+
+    public int pop2() {
+      synchronized(this) {
+        if (this.head == null) { return -1; }
+      }
+      synchronized(this) {
+        int value = this.head.item;
+        this.head = this.head.next;
+        return value;
+      }
+    }
+
+    public int pop3() {
+      synchronized(this) {
+        if (this.head == null) { return -1; }
+      }
+      yield;
+      synchronized(this) {
+        assert this.head != null;
+        int value = this.head.item;
+        this.head = this.head.next;
+        return value;
+      }
+    }
+}
+
+///: (42.20): Reduction failure
+///: (55.9): This assertion may not hold.

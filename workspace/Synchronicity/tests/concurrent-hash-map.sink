@@ -1,0 +1,268 @@
+
+// Java 1.5 ConcurrentHashMap, sort of...
+
+class Key {
+}
+
+class Value {
+}
+
+class HashEntry {
+  Key key         isLocal(this) ? threadlocal : readonly;
+  int hash        isLocal(this) ? threadlocal : readonly;
+  Value value     isLocal(this) ? threadlocal : whenever;
+  HashEntry next  isLocal(this) ? threadlocal : readonly;
+
+  void init(Key key, int hash, HashEntry next, Value value) {
+     this.key := key;
+     this.hash := hash;
+     this.next := next;
+     this.value := value;
+  }
+}
+
+class Segment {
+  array HashEntryArray = HashEntry[write_guarded_by this]
+
+  int count             isLocal(this) ? threadlocal : write_guarded_by this;
+
+  [HashEntryArray{this}] table  isLocal(this) ? threadlocal : readonly;
+
+    invariant this.table != [HashEntryArray{this}].null;
+
+    void init() {
+      [HashEntryArray{this}] table = new [HashEntryArray{this}](16);
+          this.count := 0;
+          this.table := table;
+    }
+
+    HashEntry getFirst(int hash) {
+      [HashEntryArray{this}] table := this.table;
+
+      yield;
+
+      int index = hash % table.length;
+      HashEntry first := table[index];
+      return first;
+    }
+
+    /**
+     * Read value field of an entry under targe. Called if value
+     * field ever appears to be null. This is possible only if a
+     * compiler happens to reorder a HashEntry initialization with
+     * its table assignment, which is legal under memory model
+     * but is not known to ever occur.
+     */
+    Value readValueUnderLock(HashEntry e) {
+      synchronized(e) {
+          Value v := e.value;
+          return v;
+      }
+    }
+
+    public Value get(Key key, int hash) {
+      int count := this.count;   // read-volatile
+      if (count != 0) {
+        yield;
+        HashEntry e = this.getFirst(hash);
+        yield;
+        while (e != HashEntry.null)
+        invariant e == HashEntry.null || isShared(e);
+        invariant this != Segment.null;
+        {
+          int ehash := e.hash;
+          Key ekey  := e.key;
+          if (ehash == hash && ekey == key) {
+            Value v := e.value;
+            if (v != Value.null) {
+              return v;
+            } else {
+              yield;
+              v = this.readValueUnderLock(e);
+              return v;
+            }
+          }
+          e := e.next;
+          yield;
+        }
+      }
+      return Value.null;
+    }
+
+    Value put(Key key, int hash, Value value) {
+      synchronized(this) {
+        int c := this.count;
+        [HashEntryArray{this}] tab := this.table;
+        int index = hash % tab.length;
+        HashEntry first := tab[index];
+        HashEntry e = first;
+        while (true)
+          invariant e == HashEntry.null || isShared(e);
+          invariant first == HashEntry.null || isShared(first);
+          invariant holds(this);
+        {
+          if (e == HashEntry.null) { break; }
+          int ehash := e.hash;
+          if (ehash != hash) { break; }
+          Key ekey := e.key;
+          if (ekey != key) { break; }
+          e := e.next;
+        }
+
+        Value oldValue;
+        if (e != HashEntry.null) {
+          oldValue := e.value;
+
+          yield;
+
+          e.value := value;
+        } else {
+
+          oldValue = Value.null;
+          HashEntry newEntry = new HashEntry();
+          newEntry.init(key, hash, first, value);
+          tab[index] := newEntry;
+
+          yield;
+
+          c = c + 1;
+          this.count := c;
+        }
+      return oldValue;
+    }
+  }
+}
+
+class ConcurrentHashMap {
+
+  array SegmentArray = Segment[isLocal(this) ? threadlocal : readonly]
+
+  [SegmentArray{this}] segments  isLocal(this) ? threadlocal : readonly;
+
+  invariant this.segments != [SegmentArray{this}].null;
+  invariant forall int i :: 0 <= i && i < this.segments.length ==> this.segments[i] != Segment.null && isShared(this.segments[i]);
+  invariant forall int i, int j :: 0 <= i && i < this.segments.length &&
+          0 <= j && j < this.segments.length &&
+          this.segments[i] == this.segments[j] ==> i == j;
+
+  void init() {
+    [SegmentArray{this}] segments = new [SegmentArray{this}](16);
+    for (int ii = 0; ii < 16; ii = ii + 1)
+      invariant isLocal(segments);
+      invariant forall int k :: 0 <= k && k < ii ==> segments[k] != Segment.null && isShared(segments[k]);
+      invariant forall int i, int j :: 0 <= i && i < ii && 0 <= j && j < ii && segments[i] == segments[j] ==> i == j;
+    {
+      Segment seg = new Segment();
+      seg.init();
+      segments[ii] := seg;
+    }
+    this.segments := segments;
+  }
+
+  int hash(Key key) {
+    int hashValue;
+    return hashValue;
+  }
+
+  Segment segmentFor(int hash) {
+    int index = (hash / 16) % 16;
+    [SegmentArray{this}] segs := this.segments;
+    Segment seg := segs[index];
+    return seg;
+  }
+
+  public Value get(Key key) {
+    int hash = this.hash(key);
+    Segment seg = this.segmentFor(hash);
+    Value v;
+    yield;
+    v = seg.get(key, hash);
+    return v;
+  }
+
+  public Value put(Key key, Value value) {
+    int hash = this.hash(key);
+    Segment seg = this.segmentFor(hash);
+    yield;
+    Value v = seg.put(key, hash, value);
+    return v;
+  }
+
+  public int size() {
+    [SegmentArray{this}] segments := this.segments;
+    int sum;
+    int check;
+
+    assert isShared(segments);
+
+    // not exactly realistic since we don't have mod counts.
+    for (int k = 0; k < 5; k = k + 1)
+        invariant segments == this.segments;
+    {
+      sum = 0;
+      check = 0;
+      yield;
+      for (int i = 0; i < segments.length; i = i + 1)
+          invariant segments == this.segments;
+      {
+        Segment s := segments[i];
+        int t := s.count;
+        sum = sum + t;
+        yield;
+      }
+      for (i = 0; i < segments.length; i = i + 1)
+          invariant segments == this.segments;
+      {
+        Segment s := segments[i];
+        int t := s.count;
+        check = check + t;
+        yield;
+      }
+      if (sum == check) {
+        return sum;
+      }
+    }
+
+    yield;
+
+    sum = 0;
+
+    for (int i = 0; i < segments.length; i = i + 1)
+      invariant segments == this.segments;
+      invariant forall int kk :: 0 <= kk && kk < i ==> holds(segments[kk]);
+    {
+      Segment s := segments[i];
+      acquire(s);
+    }
+
+    for (i = 0; i < segments.length; i = i + 1)
+      invariant segments == this.segments;
+      invariant forall int kk :: 0 <= kk && kk < segments.length ==> holds(segments[kk]);
+    {
+      Segment s := segments[i];
+      int t := s.count;
+      sum = sum + t;
+    }
+
+    for ( i = 0; i < segments.length; i = i + 1)
+      invariant segments == this.segments;
+      invariant forall int kk :: i <= kk && kk < segments.length ==> holds(segments[kk]);
+    {
+      Segment s := segments[i];
+      release(s);
+//      assert forall int kk :: i < kk && kk < segments.length ==> holds(segments[kk]);
+      yield;  // ONLY NEED BECAUSE WE ARE IN A LOOP...
+    }
+    return sum;
+  }
+}
+
+
+class Main {
+
+  // needed since inits cannot be public...
+  public void run() {
+    ConcurrentHashMap c = new ConcurrentHashMap();
+    c.init();
+  }
+}

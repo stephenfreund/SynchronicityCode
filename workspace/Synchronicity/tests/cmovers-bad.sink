@@ -1,0 +1,22 @@
+//FML
+
+class Cow {
+    int bad1 B;
+    int bad2 holds(this) ? B:R;
+}
+
+///: (4.5): Cow.bad1 failed Write-Write Right-Mover Check
+///: (4.5): Cow.bad1 failed Write-Read Right-Mover Check
+///: (4.5): Cow.bad1 failed Write-Write Left-Mover Check
+///: (4.5): Cow.bad1 failed Write-Read Left-Mover Check
+///: (4.5): Cow.bad1 failed Read-Write Right-Mover Check
+///: (4.5): Cow.bad1 failed Read-Write Left-Mover Check
+///: (5.5): Cow.bad2 failed Write-Write Right-Mover Check
+///: (5.5): Cow.bad2 failed Write-Read Right-Mover Check
+///: (5.5): Cow.bad2 failed Write-Write Left-Mover Check
+///: (5.5): Cow.bad2 failed Write-Read Left-Mover Check
+///: (5.5): Cow.bad2 failed Read-Write Right-Mover Check
+///: (5.5): Cow.bad2 failed Read-Write Left-Mover Check
+
+///: (4.14): yields_as clause for Cow.bad1 is not valid
+///: (5.14): yields_as clause for Cow.bad2 is not valid

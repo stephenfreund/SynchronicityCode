@@ -1,0 +1,60 @@
+///: ignore
+// one big lock.
+
+
+class Node {
+    int item isLocal(this) ? threadlocal : readonly;
+    Node next this.item < 4 ? guarded_by this.owner : readonly;
+    CoarseList owner isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null ==> this.owner == this.next.owner;
+    invariant this.owner != null;
+
+    // INT_MIN .. INT_MAX
+    invariant -4 <= this.item && this.item <= 4;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == 4;
+
+}
+
+class CoarseList {
+
+    Node head readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == -4;
+    invariant this.head.owner == this;
+
+    requires -4 < item && item < 4;
+    public bool add(int item) {
+        Node pred;
+        Node curr;
+        synchronized(this) {
+            pred = this.head;
+            curr = pred.next;
+
+            while (curr.item < item)
+              invariant isShared(curr);
+              invariant isShared(pred);
+              invariant pred.owner == this;
+              invariant curr.owner == this;
+              invariant pred.item < item;
+            {
+                pred = curr;
+                curr = curr.next;
+            }
+            if(item == curr.item) {
+                return false;
+            } else {
+                Node node = new Node();
+                node.item = item;
+                node.owner = this;
+                node.next = curr;
+                pred.next = node;
+                return true;
+            }
+        }
+    }
+}

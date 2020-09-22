@@ -1,0 +1,57 @@
+
+class Node {
+    int value  moves_as isLocal(this) ? threadlocal : readonly;
+
+    noABA volatile Node next  moves_as isLocal(this) ? isRead() ? B
+                                                                : (isLocal(newValue) || newValue == null ? B : E)
+                                        : isRead() ? (this.next != null ? R : N)
+                                        : (isLocal(newValue) && this.next == null && newValue != null ? N : E)
+    yields_as newValue == this.next
+                           || (!isLocal(newValue) && !isShared(newValue) && (newValue != null));
+
+    Node(int value, Node next) {
+        this.value = value;
+        this.next = next;
+    }
+}
+
+class Queue {
+
+    volatile Node head moves_as isLocal(this) ? threadlocal : N;
+    volatile Node tail moves_as isLocal(this) ? threadlocal : N;
+
+    invariant this.head != null;
+    invariant this.tail != null;
+
+
+    public Queue() {
+        Node sentinel = new Node(0, null);
+        this.head = sentinel;
+        this.tail = sentinel;
+    }
+
+    public void enqueue(int value) {
+        Node n = new Node(value, null);
+        Node last = this.tail;
+        yield;
+        while(true)
+            invariant isLocal(n);
+            invariant isShared(last);
+            invariant n.next == null;
+        {
+            Node next = last.next;
+            if (next == null){
+                if (cas(last, next, next, n)) {
+                    yield;
+                    cas(this, tail, last, n);
+                    return;
+                }
+            }else {
+                if (cas(this, tail, last, next)) {
+                    last = next;
+                }
+            }
+            yield;
+        }
+    }
+}

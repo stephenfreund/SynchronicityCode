@@ -1,0 +1,48 @@
+
+axiom (forall int x, int y :: { x % y } (0 <= x && x < y) ==> (x == x % y));
+// axiom (forall int x :: { x % x } (x % x == 0));
+
+axiom (512 % 512 == 0);
+axiom (-512) % 512 == 0;
+axiom (forall int x :: { (x % 512) % 512} (x % 512) % 512 == x % 512);
+// axiom (forall int x :: { x % 512 }  (0 <= x && x < 512) == (x % 512 == x));
+
+//axiom (forall int h, int t :: { h % 512, t % 512 } 0 <= h && h <= t && t < h + 512 && h % 512 == t % 512 ==> (h == t));
+//axiom (forall int h, int t :: { h % 512, t % 512 } 0 <= h && h < t && t <= h + 512 && h % 512 == t % 512 ==> (t == h + 512));
+
+axiom (forall int x, int y :: { (512 + y - x) % 512 }
+        0 <= x && x < 512 &&
+        (0 <= y && y < 511 && (y + 1) % 512 != x
+    ==> (512 + y - x) % 512 + 1 == (512 + (y + 1) % 512 - x) % 512));
+
+axiom (forall int x, int y :: { (512 + y - x) % 512 }
+        (y == 511 && (y + 1) % 512 != x          ==> (512 + y - x) % 512 + 1 == (512 - x) % 512));
+
+
+axiom (forall int x, int y :: { (512 + y - x) % 512 }
+        0 <= x && x < 511 &&
+        0 <= y && y < 512 &&
+        x != y
+    ==> (512 + y - x) % 512 - 1 == (512 + y - (x + 1) % 512) % 512);
+/*
+axiom (forall int y :: { (512 + y - 511) % 512 }
+        0 <= y && y < 510
+    ==> (512 + y - 511) % 512 - 1 == (512 + y) % 512);
+*/
+class Queue {
+    public void enqueue(int t, int h) {
+        assume 0 <= t && t < 512;
+        assume 0 <= h && h < 512;
+        assume (t + 1) % 512 != h;
+        assert (512 + t - h) % 512 + 1 == (512 + (t + 1) % 512 - h) % 512;
+    }
+
+
+    public void dequeue(int t, int h) {
+        assume 0 <= t && t < 512;
+        assume 0 <= h && h < 512;
+        assume t != h;
+        assert (512 + t - h) % 512 - 1 == (512 + t - (h + 1) % 512) % 512;
+        assert false;
+    }
+}

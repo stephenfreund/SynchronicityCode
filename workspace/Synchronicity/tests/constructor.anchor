@@ -1,0 +1,8 @@
+
+class Cow {
+
+
+   Cow(int x) {
+     Cow y = new Cow(3);
+   }
+}

@@ -1,0 +1,74 @@
+///: ignore
+
+class ThreadState {
+    type A = int[j : tid == this.t ? B:E ]
+
+    Tid t readonly;
+
+    @A v tid == this.t ? B:E;
+
+    void set(int j, int e) {
+        assume tid == this.t;
+        assume 0 <= j && j < this.v.length;
+        @A v := this.v;
+        v[j] := e;
+    }
+
+    int get(int j) {
+        assume tid == this.t;
+        assume 0 <= j && j < this.v.length;
+        @A v := this.v;
+        int y := v[j];
+        return y;
+    }
+
+    public bool write(VarState sx) {
+        assume tid == this.t;
+        int t := this.t;
+        int e = this.get(t);
+        synchronized(sx) {
+            int w := sx.w;
+            if (w == e) {
+                return true;
+            }
+            int ww = this.get(w);
+            if (w > ww) {
+                return false;
+            }
+            int r := sx.r;
+            if (r != -1) {
+                int rr = this.get(r);
+                if (r > rr) { return false; }
+                sx.w := e;
+            } else {
+                bool p = sx.leq(this);
+                if (!p) {
+                    return false;
+                }
+                sx.w := e;
+            }
+        }
+        return true;
+    }
+
+}
+
+class VarState {
+
+    type T = int[t : (this.r != -1)
+                   ? guarded_by this
+                   : (((holds(this) || tid == t) ? B:E) # ((holds(this) && tid == t) ? B:E))]
+
+    int r  (this.r != -1) ? write_guarded_by this : readonly;
+    int w  write_guarded_by this;
+
+    // just use "a" as a one element array...
+    @T v (this.r != -1) ? guarded_by this : write_guarded_by this;
+
+    bool leq(ThreadState st) {
+        int i = 0;
+        @T v;
+        return true;
+    }
+
+}

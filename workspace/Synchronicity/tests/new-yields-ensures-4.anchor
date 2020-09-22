@@ -1,0 +1,39 @@
+///: ignore
+
+class Cow {
+	volatile int x  moves_as  isRead ? cas
+	                 : (newValue > this.x ? cas : E)
+
+	        yields_as newValue >= this.x;
+
+	public void f() {
+          int v = this.x;
+          yield;
+          if (v < 10) {
+            if (cas(this,x,v,10)) {
+              yield;
+              assert this.x >= 10;
+            } else {
+              assert this.x >= v;
+            }
+          }
+        yield;
+    }
+}
+
+class Cow2 {
+	volatile int x  moves_as  isRead ? guarded_by this
+	               : newValue == this.x + 1 ? guarded_by this : E
+	        yields_as newValue >= this.x;
+
+	public void f() {
+	  int v;
+	  synchronized(this) {
+      v = this.x;
+    }
+    yield;
+	  synchronized(this) {
+      assert this.x >= v;
+    }
+  }
+}

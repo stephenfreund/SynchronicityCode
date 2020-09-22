@@ -1,0 +1,30 @@
+
+class Lock { }
+
+class HashSet {
+
+    public void a() {
+      commit;
+    }
+
+    public void b() {
+      commit;
+      commit;
+    }
+
+    public void c() {
+      acquire(this);
+      commit;
+    }
+
+    public void d() {
+      acquire(this);
+      release(this);
+      commit;
+    }
+
+
+}
+
+///: (12.7): Can only commit when in pre-commit phase.
+///: (23.7): Can only commit when in pre-commit phase.

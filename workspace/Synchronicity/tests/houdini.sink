@@ -1,0 +1,21 @@
+
+class Inc {
+
+    int x holds(this) ? B : E;
+    int y whenever;
+
+	public void inc()  {
+	  synchronized(this) {
+        this.x := 43;
+        yield;
+        this.x := 42;
+      }
+	}
+
+	public void inc2()  {
+        this.y := 43;
+        yield;
+        this.y := 42;
+	}
+}
+

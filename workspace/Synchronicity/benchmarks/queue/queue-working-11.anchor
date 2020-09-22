@@ -1,0 +1,82 @@
+#define Inv(a,h,t)  (a != null && a.length == 512 && 0 <= h && h < 512 && 0 <= t && t < 512)
+#define Pos(x)      ((x) % this.elems.length)
+#define isEmpty()   (this.tail == this.head)
+#define isFull()    (this.tail + 1 == this.head || this.tail + 1 == 512 && this.head == 0)
+#define isInHeadToTail(x)  ((((this.head) <= x && x < (this.tail)) || ((this.tail) <= (this.head) && (x < (this.tail) || (this.head) <= x))))
+#define isInTailToHead(x)  ((((this.head) <= (this.tail) && (x < (this.head) || (this.tail) <= x)) || ((this.tail) <= x && x < (this.head))))
+
+
+class Queue {
+
+    array T = int[moves_as
+        Inv(this.elems, this.head, this.tail) &&
+            (tid == 1 && !isFull() && isInTailToHead(index) ||
+            (tid == 2 && !isEmpty() && isInHeadToTail(index))) ? B :
+        E
+     ]
+
+
+    [T] elems moves_as isLocal(this) ? threadlocal : readonly;
+
+    volatile int tail
+      moves_as isRead() ? tid == 1 ? B : N
+                        : tid == 1 && !isFull() && newValue == Pos(this.tail + 1) ? N : E
+            yielding (Inv(this.elems, this.head, this.tail)
+             ==> (Inv(this.elems, this.head, newValue) &&
+                  (tid == 2 ==> isInTailToHead(newValue))));
+
+    volatile int head
+    moves_as isRead() ? tid == 2 ? B : N
+                      : tid == 2 && !isEmpty() && newValue == Pos(this.head + 1) ? N : E
+    yielding (Inv(this.elems, this.head, this.tail) ==> (Inv(this.elems, newValue, this.head)));  //&&
+            //(tid == 1 ==> isInHeadToTail(this.head) && isInHeadToTail(newValue) )));
+
+
+
+    // REP INV:
+    invariant Inv(this.elems, this.head, this.tail);
+
+    // ABSTRACT VARS:
+    ghost Seq<int> spec moves_as E;
+
+    // INVARIANTS TO MAP CONCRETE -> ABSTRACT
+    invariant (512 + this.tail - this.head) % 512 == SeqLen(this.spec);
+    invariant (forall int i :: { i % this.elems.length } this.head <= i && i < this.tail ==> (this.elems[i % this.elems.length] == SeqNth(this.spec, i - this.head)));
+
+    // ALL SPECS WRITTEN IN TERMS OF ABSTRACT VARS
+    ensures this.spec == SeqEmpty<int>();
+    public Vector() {
+        this.spec = SeqEmpty<int>();
+        this.elems = new [T](512);
+    }
+/*
+    requires tid == 1;
+    modifies this, this.elems;  // slightly unfortunate -> still refers to concrete state...
+    ensures this.spec == old(this.spec) || (this.spec == SeqConcat(old(this.spec), SeqUnit(x)));
+    void enqueue(int x) {
+        if ( (this.tail + 1) % this.elems.length != this.head) {
+            yield;
+            this.elems[this.tail % this.elems.length] = x;
+            this.spec = SeqConcat(this.spec, SeqUnit(x));
+            this.tail = (this.tail + 1) % 512;
+        }
+    }
+
+    requires tid == 2;
+    modifies this, this.elems;  // slightly unfortunate -> still refers to concrete state...
+    ensures ($result == 0 && this.spec == old(this.spec))
+            || ($result == old(SeqNth(this.spec, 0)) && this.spec == SeqExtract(old(this.spec), 1, SeqLen(old(this.spec))-1));
+    public int dequeue() {
+        if (this.tail != this.head) {
+            yield;
+            int result = this.elems[this.head % this.elems.length];
+            this.head = (this.head + 1) % 512;
+            this.spec = SeqExtract(this.spec, 1, SeqLen(this.spec)-1);
+            return result;
+        } else {
+            return 0;
+        }
+    }
+*/
+
+}

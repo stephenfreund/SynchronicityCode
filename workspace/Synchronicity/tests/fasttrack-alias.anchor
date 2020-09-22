@@ -1,0 +1,28 @@
+class LockState {
+  array VC_LockState = int[moves_as isLocal(this) ? B : E]
+
+  [VC_LockState] vc moves_as  isLocal(this) ? B : E;
+
+    void copy(LockState st) {
+      st.vc[0] = 0;
+    }
+}
+
+class ThreadState {
+
+    array VC_ThreadState = int[moves_as  isLocal(this) ? B : E]
+
+    [VC_ThreadState] vc  moves_as  isLocal(this) ? B : E;
+
+    void get() {
+      [VC_ThreadState{this}] vc2 = this.vc;
+    }
+
+    requires isLocal(this);
+    public void acq() {
+        this.get();
+    }
+
+
+}
+

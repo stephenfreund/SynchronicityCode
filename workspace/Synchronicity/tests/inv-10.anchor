@@ -1,0 +1,12 @@
+class P {
+    int x moves_as guarded_by this;
+    int y moves_as guarded_by this;
+    invariant this.x == this.y;
+
+    public void f() {
+        synchronized (this) {
+            this.x = this.x + 1;
+            this.y = this.y + 1;
+        }
+    }
+}

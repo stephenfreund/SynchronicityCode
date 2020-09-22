@@ -1,0 +1,8 @@
+class ThreadState {
+    int sxR(!(this.sxR==-1)?(
+
+    holds(this)?B:N):R)#(!(this.sxR==-1)?(holds(this)?N:E):E);
+
+    // (this.sxR != -1) ? write_guarded_by this : (R#E);
+
+}

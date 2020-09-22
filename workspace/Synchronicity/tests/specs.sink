@@ -1,0 +1,15 @@
+
+class Cow {
+
+  int x isRead ? B : E;
+  int y isRead ? B : (newValue == 2 ? B : E);
+
+
+  int a1 isRead ? B : isRead ? B : E;
+
+
+  int z isRead ? (newValue == 2 ? B : E) : E;
+
+}
+
+///: (11.19): Can only refer to newValue for writes in spec

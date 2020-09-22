@@ -1,0 +1,57 @@
+// OK
+
+class Cow {
+    Cow a whenever;
+    Cow b whenever;
+
+    public void f() {
+        Cow a := this.a;
+        Cow b := this.b;
+        synchronized(a) {
+            synchronized(b) {
+
+            }
+        }
+    }
+
+    public void f2() {
+        Cow a := this.a;
+        Cow b := this.b;
+        while(true) {
+            synchronized(a) {
+                synchronized(b) {
+                    break;
+                }
+            }
+        }
+    }
+
+    public void f3() {
+        Cow a := this.a;
+        Cow b := this.b;
+        synchronized(a) {
+            while(true) {
+                synchronized(b) {
+                    break;
+                }
+            }
+        }
+    }
+
+    public void f4() {
+        Cow a := this.a;
+        Cow b := this.b;
+        synchronized(a) {
+            while(true) {
+                synchronized(b) {
+
+                }
+            }
+        }
+    }
+}
+
+///: (9.9): Reduction failure
+///: (19.9): Reduction failure
+///: (31.9): Reduction failure
+///: (43.9): Reduction failure

@@ -1,0 +1,35 @@
+
+class Buffer {
+
+	array T = int[moves_as guarded_by this]
+
+	[T{this}] elementData   moves_as isLocal(this) ? threadlocal : guarded_by this;
+	int elementCount        moves_as isLocal(this) ? threadlocal : guarded_by this;
+	int start               moves_as isLocal(this) ? threadlocal : guarded_by this;
+	int end                 moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+	void insert(int t)  {
+		synchronized (this) {
+			[T{this}] elementData = this.elementData;
+			while (this.elementCount == elementData.length) {
+				wait(this);
+			}
+			elementData[this.end] = t;
+			this.end = (this.end + 1) % elementData.length;
+			this.elementCount = this.elementCount + 1;
+		}
+	}
+
+	int delete() {
+		synchronized (this) {
+			[T{this}] elementData = this.elementData;
+			while (this.elementCount == 0) {
+				wait(this);
+			}
+			int t = elementData[this.start];
+			this.start = (this.start + 1) % elementData.length;
+			this.elementCount = this.elementCount - 1;
+			return t;
+		}
+	}
+}

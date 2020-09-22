@@ -1,0 +1,31 @@
+
+class C {
+
+    array T = int[guarded_by this]
+
+    [T] a whenever;
+
+}
+
+class D {
+
+    C c whenever;
+
+    void f() {
+        C c := this.c;
+        yield;
+        [C.T{c}] a := c.a;
+    }
+
+    void f2() {
+        assume this.c != C.null;   // So it can be an owner...
+        C c := this.c;
+        yield;
+        [C.T{c}] a = new [C.T{c}](10);
+        yield;
+        c.a := a;
+
+    }
+}
+
+

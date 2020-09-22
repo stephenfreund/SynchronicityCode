@@ -1,0 +1,27 @@
+class Example3 {
+  volatile int data   moves_as isRead ? this.flag ? B : E
+                    : (tid == 0 && !this.flag) ? B : E;
+  volatile bool flag  moves_as isRead ? (this.flag || tid == 0) ? R : N
+                    : (tid == 0 && !this.flag) ? N : E;
+
+
+  public void work() {
+    if (tid == 0) {
+      if (!this.flag) {
+          this.flag = true;
+          this.data = 2;
+       }
+    } else {
+        while (true) {
+          if (this.flag) {
+            break;
+          }
+          yield;
+        }
+        int y = this.data;
+    }
+  }
+}
+
+
+///: (12.11): Reduction failure

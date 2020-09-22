@@ -1,0 +1,239 @@
+
+
+class Ref {
+    Node reference    moves_as isLocal(this) ? threadlocal : readonly;
+    bool mark         moves_as isLocal(this) ? threadlocal : readonly;
+    Ref(Node reference, bool mark) {
+        this.reference = reference;
+        this.mark = mark;
+    }
+}
+
+class Node {
+
+    int item moves_as isLocal(this) ? threadlocal : readonly;
+    noABA volatile Ref pair  moves_as isLocal(this) ? B # (isLocal(newValue) ? B : E)
+                                                     : N # (isLocal(newValue) ? N : E)
+                     yields_as newValue == this.pair
+                           || (!isLocal(newValue) && !isShared(newValue) && (newValue != null));
+
+    invariant this.pair != null;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.pair.reference != null ==> this.item < this.pair.reference.item;
+    invariant (this.pair.reference == null) == (this.item == INT_MAX);
+
+    invariant this.pair.mark ==> (INT_MIN < this.item && this.item < INT_MAX);
+
+    Node(int item, Node initialRef, bool initialMark) {
+      this.item = item;
+      this.pair = this.pairOf(initialRef, initialMark);
+    }
+
+    Ref pairOf(Node initialRef, bool initialMark) {
+      Ref p = new Ref(initialRef, initialMark);
+      return p;
+    }
+
+    Node getReference() {
+        return this.pair.reference;
+    }
+
+    bool isMarked() {
+        return this.pair.mark;
+    }
+
+    Ref get() {
+        return this.pair;
+    }
+
+    bool compareAndSet(Node      expectedReference,
+                     Node       newReference,
+                     bool expectedMark,
+                     bool newMark) {
+
+        Ref current = this.pair;
+        return
+            expectedReference == current.reference &&
+            expectedMark == current.mark &&
+            ((newReference == current.reference &&
+             newMark == current.mark) ||
+             this.casPair(current, this.pairOf(newReference, newMark)));
+    }
+
+    bool attemptMark(Node expectedReference, bool newMark) {
+        Ref current = this.pair;
+        return
+            expectedReference == current.reference &&
+            (newMark == current.mark ||
+             this.casPair(current, this.pairOf(expectedReference, newMark)));
+    }
+
+    bool casPair(Ref cmp, Ref val) {
+        return cas(this, pair, cmp, val);
+    }
+}
+
+class Window {
+  Node pred moves_as threadlocal;
+  Node curr moves_as threadlocal;
+  Window(Node pred, Node curr) {
+    this.pred = pred;
+    this.curr = curr;
+  }
+}
+
+class List {
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+
+    public List() {
+      Node tail = new Node(INT_MAX, null, false);
+      Node head = new Node(INT_MIN, tail, false);
+      this.head = head;
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    Window findHelper(int item) {
+      Node pred = this.head;
+      Node curr = pred.getReference();
+
+      yield;
+
+      while (true)
+        invariant isShared(curr);
+        invariant isShared(pred);
+        invariant pred.item < item;
+        invariant curr.item <= INT_MAX;
+        invariant pred.item < curr.item;
+      {
+
+        Ref succPair = curr.get();
+        Node succ = succPair.reference;
+        bool marked = succPair.mark;
+
+        yield;
+
+        while (marked)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant marked ==> isShared(succ);
+          invariant marked ==> curr.item < INT_MAX;
+          invariant marked ==> curr.item < succ.item;
+          invariant !marked ==> (isShared(succ) && curr.item < succ.item) || (succ == null && curr.item == INT_MAX);
+          invariant pred.item < item;
+          invariant pred.item < curr.item;
+          invariant succ != null ==> curr.item < succ.item;
+        {
+
+          bool snip = pred.compareAndSet(curr, succ, false, false);
+          if (!snip) {
+            return null;
+          }
+
+          yield;
+
+          curr = pred.getReference();
+          yield;
+          succPair = curr.get();
+          succ = succPair.reference;
+          marked = succPair.mark;
+
+          yield;
+
+        }
+
+        if (curr.item >= item) {
+          Window w = new Window(pred, curr);
+          return w;
+        } else {
+          pred = curr;
+          curr = succ;
+        }
+
+        yield;
+
+      }
+    }
+
+
+
+    requires INT_MIN < item && item < INT_MAX;
+    Window find(int item) {
+      yield;
+      while (true) {
+        Window w = this.findHelper(item);
+        if (w != null) {
+          assert w.pred.item < item && item <= w.curr.item;
+          return w;
+        }
+        yield;
+      }
+   //    return null;
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool add(int item) {
+      while (true) {
+        Window window = this.find(item);
+        Node pred = window.pred;
+        Node curr = window.curr;
+        if (curr.item == item) {
+          return false;
+        } else {
+          Node node = new Node(item, curr, false);
+          if (pred.compareAndSet(curr, node, false, false)) {
+            return true;
+          }
+        }
+        yield;
+      }
+    }
+
+
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool remove(int item) {
+      while (true) {
+
+        Window window = this.find(item);
+        Node pred = window.pred;
+        Node curr = window.curr;
+        if (curr.item != item) {
+          return false;
+        } else {
+          Node succ = curr.getReference();
+          yield;
+          bool snip = curr.attemptMark(succ, true);
+          if (snip) {
+              yield;
+              pred.compareAndSet(curr, succ, false, false);
+              return true;
+          }
+        }
+        yield;
+      }
+    }
+
+
+     requires INT_MIN < item && item < INT_MAX;
+     public bool contains(int item) {
+         Node curr = this.head;
+         yield;
+         while (curr.item < item)
+           invariant isShared(curr);
+         {
+           curr = curr.getReference();
+           yield;
+         }
+         Ref currPair2 = curr.get();
+         return curr.item == item && !currPair2.mark;
+     }
+
+}

@@ -1,0 +1,22 @@
+// BAD
+
+class Cow {
+    int c1 isLocal(this) ? threadlocal : readonly;
+
+    public void f() {
+        Cow c = new Cow();
+        int t;
+        t := c.c1;
+        t := this.c1;
+    }
+
+    public void f2() {
+        Cow c = new Cow();
+        int t;
+        c.c1 := t; // ok - local
+        this.c1 := t; // bad - shared
+    }
+
+}
+
+///: (17.9): Reduction failure

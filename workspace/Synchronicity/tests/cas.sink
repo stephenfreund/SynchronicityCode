@@ -1,0 +1,86 @@
+///: ignore
+
+class C {
+    int x cas;
+
+    public void f() {
+      while (true) {
+        int y := this.x;
+        yield;
+        int yy = y + 1;
+        bool z = this.x @ y :~ yy;
+        if (z) { break; }
+        yield;
+      }
+      return;
+    }
+
+    public void f2() {
+      int y := this.x;
+      bool z = this.x @ y :~ 0;
+      return;
+    }
+
+    public void f2a() {
+      int y := this.x;
+      ## assume C.x._nextCAS[this] != tid;
+      ## _pc := PostCommit;
+      bool z = this.x @ y :~ 0;
+      return;
+    }
+
+    public void f3() {
+      ## C.x._nextCAS[this] := tid;
+      int y := this.x;
+      yield;
+      ## assert C.x._nextCAS[this] == tid;
+      ## assert C.x[this] == y;
+      int y2 := this.x;
+      yield;
+      ## assert C.x._nextCAS[this] == tid;
+      ## assert C.x[this] == y;
+      bool z = this.x @ y :~ 0;
+      assert z;
+      if (z) {
+        assert y == y2;
+      }
+      return;
+    }
+
+    public void f4() {
+      int y := this.x;
+      yield;
+      int y2 := this.x;
+      yield;
+      bool z = this.x @ y :~ 0;
+      if (z) {
+        assert y == y2;
+      }
+      return;  // bad ???
+    }
+
+  public void f5() {
+      int y := this.x;
+      yield;
+      int y2 := this.x;
+      yield;
+      bool z = this.x @ y :~ 0;
+      if (!z) {
+        assert y == y2;
+      }
+      return;
+    }
+
+    public void f6() {
+      int y := this.x;  // N
+//      yield;
+      this.x := 0;  // N
+      return;
+    }
+}
+
+
+///: (19.7): Reduction failure
+///: (27.7): Reduction failure
+///: (68.9): This assertion may not hold.
+///: (76.7): Reduction failure

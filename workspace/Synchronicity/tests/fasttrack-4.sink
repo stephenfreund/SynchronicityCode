@@ -1,0 +1,151 @@
+/* public vs. cooperable
+what does yield mean?
+purity vs CIVL model?
+Array types don't play nicely with inlining
+Do we want procedure specs?  ala public type system?
+*/
+
+class VarState {
+    array VarState_VC = int[
+        isLocal(athis) ? B
+                           : (this.read != -1)
+                               ? guarded_by this
+                               : (((holds(this) || tid == index) ? B:E) # ((holds(this) && tid == index) ? B:E))
+    ]
+
+
+    int read  (this.read != -1) ? write_guarded_by this : (R#E);
+    int write  write_guarded_by this;
+    [VarState_VC] readVC (this.read != -1) ? guarded_by this : write_guarded_by this;
+
+    int get(int i) {
+        [VarState_VC] readVC := this.readVC;
+        if (i < readVC.length) {
+            int t := readVC[i];
+            return t;
+        } else {
+            return 0;
+         }
+     }
+
+    void ensureCapacity(int n) {
+        [VarState_VC] readVC := this.readVC;
+
+        if (n > readVC.length) {
+            [VarState_VC] newVC = new [VarState_VC](n);
+            int i = 0;
+            while (i < n) {
+                int temp := readVC[i];
+                newVC[i] := temp;
+                i = i + 1;
+            }
+            this.readVC := newVC;
+         }
+    }
+
+    void set(int index, int value) {
+        this.ensureCapacity(index + 1);
+        [VarState_VC] readVC := this.readVC;
+        readVC[index] := value;
+     }
+
+    int size() {
+        [VarState_VC] readVC := this.readVC;
+        int t = readVC.length;
+        return t;
+     }
+}
+
+class ThreadState {
+
+    array ThreadState_VC = int[tid == this.t ? B:E ]
+
+    Tid t                   readonly;
+    [ThreadState_VC] stV    tid == this.t ? B:E;
+
+
+    int get(int i) {
+        [ThreadState_VC] stV := this.stV;
+        if (i < stV.length) {
+            int t := stV[i];
+            return t;
+        } else {
+            return 0;
+         }
+     }
+
+    public bool write(VarState sx) {
+        assume tid == this.t;
+        assume isShared(this.stV);
+
+        int t := this.t;
+        int e = this.get(t);
+        int w := sx.write;
+        if (w == e) { return true; }
+        yield;
+        synchronized(sx) {
+            int ww = this.get(w);
+            if (w > ww) { return false; }
+            int r := sx.read;
+            if (r != -1) {
+                int rr = this.get(r);
+                if (r > rr) { return false; }
+                sx.write := e;
+            } else {
+                int i = 0;
+                while (i < 10) {
+                    int v1 = this.get(i);
+                    int v2 = sx.get(i);
+                    if (v1 >= v2) {
+                        return false;
+                    }
+                }
+                sx.write := e;
+            }
+        }
+        return true;
+    }
+
+    public bool read(VarState sx) {
+        assume tid == this.t;
+        assume !holds(this);
+        assume isShared(this.stV);
+        assume isShared(sx.readVC);  // != null
+        int t := this.t;
+        int e = this.get(t);
+        assume e != -1;
+
+        int r := sx.read;
+        if (r == e) {
+            return true;
+        } else {
+            if (r == -1) {
+                //assert sx.read == -1;
+                int readVCt = sx.get(t);
+                if (readVCt == e) { return true; }
+            }
+        }
+        yield;
+
+        synchronized(sx) {
+            int w := sx.write;
+            int ww = this.get(w);
+            if (w > ww) { return false; }
+            r := sx.read;
+            if (r != -1) {
+                int rr = this.get(r);
+                if (r > rr) {
+                    sx.read := e;
+                } else {
+                    sx.set(r, r);
+                    sx.set(t, e);
+                    sx.read := -1;
+                }
+            } else {
+                    sx.set(t, e);
+            }
+        }
+        return true;
+    }
+
+}

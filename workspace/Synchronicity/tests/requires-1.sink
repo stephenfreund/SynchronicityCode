@@ -1,0 +1,52 @@
+///: args -verify=Consistent
+
+
+
+class Cow { }
+
+class Inc {
+
+    int x whenever;
+
+    invariant this.x != 0;
+
+	requires d != Cow.null;
+	// requires d == Cow.null;
+	public void inc(Cow d)  {
+	    assert d == Cow.null;
+	}
+
+	requires d != Cow.null;
+	requires d == Cow.null;
+	public void inc2(Cow d)  {
+
+	}
+
+	requires isLocal(d);
+	public void inc3(Cow d)  {
+
+	}
+
+	requires !isShared(this);
+	public void inc4(Cow d)  {
+
+	}
+
+	requires this.x > 0;
+	public void inc5(Cow d)  {
+
+	}
+
+	requires this.x == 0;
+	public int inc6(Cow d)  {
+        return 3;
+	}
+}
+
+
+///: (21.9): Method has inconsistent requirements.
+///: (26.9): Method has inconsistent requirements.
+///: (31.9): Method has inconsistent requirements.
+///: (40.2): Method has inconsistent requirements.
+///: (16.6): This assertion may not hold.
+///: (35.18): Can only have right-mover memory accesses in requires clause

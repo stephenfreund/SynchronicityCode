@@ -1,0 +1,42 @@
+///: args -sameValueCommutes
+
+class Cow {
+
+    bool flag   this.flag ? (R # (newValue ? R : E))
+                          : ((holds(this) ? B : E) # (holds(this) && newValue ? N : E));
+
+    int x
+          (isRead ? holds(this) ? B : E
+                  : holds(this) ? (this.flag ? (newValue > this.x ? B : E)
+                                                  : B)
+                                     : E)
+
+	        yields_as this.flag ==> (newValue >= this.x);
+
+
+    public void f() {
+        int t;
+        synchronized(this) {
+          t := this.x;
+        }
+        yield;
+        synchronized(this) {
+            int this_x := this.x; assert this_x >= t;
+         }
+    }
+
+    public void g() {
+        int t;
+        synchronized(this) {
+          t := this.x;
+          this.flag := true;
+        }
+        yield;
+        synchronized(this) {
+          int this_x := this.x; assert this_x >= t;
+        }
+    }
+
+}
+
+///: (24.35): This assertion may not hold.

@@ -1,0 +1,11 @@
+
+class Inc {
+
+    int x guarded_by this;
+
+	public void inc()  {
+	  synchronized(this) {
+	    this.x := 0;
+	  }
+	}
+}

@@ -1,0 +1,20 @@
+///: ignore
+
+class Inc {
+
+	int counter   isLocal(this) ? threadlocal : cas;
+
+    public void inc() {
+        bool z = true; while (z)
+        {
+            int n := this.counter;
+            yield;
+            int m = n + 1;
+            bool x = this.counter @ n :~ m;
+            if (x) {
+                break;
+            }
+            yield;
+        }
+    }
+}

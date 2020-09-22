@@ -1,0 +1,40 @@
+
+class Node {
+	int value  moves_as isLocal(this) ? threadlocal : readonly;
+	Node next  moves_as isLocal(this) ? threadlocal : readonly;
+
+	Node(int value, Node next) {
+	  this.value = value;
+	  this.next = next;
+	}
+}
+
+class Stack {
+
+	volatile Node top moves_as N;
+
+	public void push(int v) {
+        while (true) {
+            Node next = this.top;
+            Node nu = new Node(v, next);
+            yield;
+            if (cas(this, top, next, nu)) {
+              break;
+            }
+          }
+	}
+
+	public int pop() {
+	    while (true)
+	    {
+	        Node top = this.top;
+	        yield;
+	        if (top != null) {
+                Node next = top.next;
+                if (cas(this, top, top, next)) {
+                    return top.value;
+                }
+            }
+	    }
+	}
+}

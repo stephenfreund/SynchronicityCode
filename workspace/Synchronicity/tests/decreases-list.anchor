@@ -1,0 +1,36 @@
+
+class Lock { }
+
+class Node {
+    int item moves_as isLocal(this) ? threadlocal : readonly;
+    Node next moves_as isLocal(this) ? threadlocal : readonly;
+    int order moves_as  isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null ==> this.order > this.next.order;
+    invariant this.order > 0;
+
+    Node(int item, Node next) {
+      this.item = item;
+      this.next = next;
+      if (next == null) {
+        this.order = 1;
+      } else {
+        this.order = next.order + 1;
+      }
+    }
+}
+
+class List {
+
+    Node head moves_as  isLocal(this) ? threadlocal : readonly;
+
+    public void traverse() {
+        for (Node x = this.head; x != null; x = x.next)
+          decreases x == null ? 0 : x.order;
+          invariant x == null || isShared(x);
+          invariant x != null ==> (x == null ? 0 : x.order) > (x.next == null ? 0 : x.next.order);
+        {
+        }
+      }
+
+}

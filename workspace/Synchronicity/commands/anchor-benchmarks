@@ -1,0 +1,3 @@
+#!/bin/bash
+
+scala -J-Xss40m -classpath ${ANCHOR_HOME}/bin anchor.benchmarks.VerifyBenchmarks $*

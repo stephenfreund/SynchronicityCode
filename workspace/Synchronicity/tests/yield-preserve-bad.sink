@@ -1,0 +1,20 @@
+// BAD
+
+class Cow {
+	int x 	guarded_by this;  
+	public void f() {
+		int xx = 0;
+		int yy;
+		synchronized(this) {
+			this.x := xx;
+		}
+			yield;
+		synchronized(this) {
+			yy := this.x;
+		}
+		assert xx == yy;
+	}
+}
+
+
+///: (15.3): This assertion may not hold.

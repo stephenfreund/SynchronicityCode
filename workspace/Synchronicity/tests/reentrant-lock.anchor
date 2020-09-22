@@ -1,0 +1,53 @@
+
+
+class ReentrantLock {
+  volatile Tid m moves_as isLocal(this)
+          ? (B # (newValue == tid || newValue == Tid.null ? B : E))
+          : isRead ? (this.m == tid ? R : E)
+                   : ((this.m == Tid.null && newValue == tid) ? R
+                                                              : (this.m == tid && newValue == Tid.null) ? L : E) !
+       yields_as (this.m == tid) == (newValue == tid);
+
+  int count moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+  invariant (this.m == Tid.null) == (this.count == 0);
+  invariant (this.m != Tid.null) == (this.count > 0);
+
+  ReentrantLock() {
+    this.m = Tid.null;
+    this.count = 0;
+  }
+
+  void acq() {
+    assume this.m == Tid.null || this.m == tid;
+    this.m = tid;
+    this.count = this.count + 1;
+  }
+
+  void rel() {
+    assert this.m == tid;
+    this.count = this.count - 1;
+    if (this.count == 0) {
+      this.m = Tid.null;
+    }
+  }
+}
+
+class Main {
+
+    public void f() {
+      ReentrantLock l = new ReentrantLock();
+      l.acq();
+      l.acq();
+      assert l.count == 2;
+      l.rel();
+      yield;
+      assert l.count == 1;
+      l.rel();
+      yield;
+      assert l.count == 1;
+
+    }
+}
+
+///: (48.7): This assertion may not hold.

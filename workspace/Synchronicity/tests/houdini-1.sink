@@ -1,0 +1,45 @@
+///: args -verify=Houdini
+
+
+
+
+class Inc {
+
+    int x whenever;
+
+    invariant p1 ==> (this.x != 0);
+    invariant p2 ==> (this.x == 0);
+
+	public void inc()  {
+        this.x := 0;
+	}
+
+}
+
+
+class Inc2 {
+
+    int x whenever;
+
+    invariant (this.x != 0);
+    invariant (this.x == 0);
+
+	public void inc2()  {
+        this.x := 0;
+	}
+
+}
+
+class Main {
+  public void main() {
+    Inc i = new Inc();
+    i.x := 0;
+    yield;
+    i.inc();
+  }
+}
+
+
+bool p1;
+bool p2;
+

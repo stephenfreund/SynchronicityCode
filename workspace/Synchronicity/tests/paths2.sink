@@ -1,0 +1,12 @@
+
+class Cow {
+	Cow y   readonly;
+
+	public void f() {
+		Cow x;
+		x = this.y;
+	}
+
+}
+
+///: (7.7): Can only access fields directly within specs

@@ -1,0 +1,24 @@
+// OK
+
+class Cow { }
+
+class Inc {
+
+	Inc next  isLocal(this) ? threadlocal : whenever;
+	Cow value  isLocal(this) ? threadlocal : whenever;
+	
+	public void inc(Cow d)  {
+		int x;
+	    Cow c = new Cow();
+	    c = new Cow();
+		Cow y := this.value;
+		yield;
+		this.value := y;
+		yield;
+		this.next := this;
+		//assert false;
+		return;
+	}
+}
+
+// Inc global;

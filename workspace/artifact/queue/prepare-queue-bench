@@ -1,0 +1,1 @@
+cpp -C -E -W -P queue.anchor > ../specs/queue.anchor

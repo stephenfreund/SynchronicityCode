@@ -1,0 +1,61 @@
+
+
+class Vector {
+
+    // CONCRETE VARS:
+
+    array T = int[moves_as isLocal(this) ? threadlocal : guarded_by this]
+
+    [T] elems moves_as isLocal(this) ? threadlocal : guarded_by this;
+    int count moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+    // ABSTRACT VARS:
+    volatile Seq<int> spec moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+    // INVARIANTS TO MAP CONCRETE -> ABSTRACT
+    invariant this.count == SeqLen(this.spec);
+    invariant (forall int i :: 0 <= i && i < this.count ==> (this.elems[i] == SeqNth(this.spec, i)));
+
+    // ALL SPECS WRITTEN IN TERMS OF ABSTRACT VARS
+    ensures this.spec == SeqEmpty<int>();
+    public Vector() {
+        this.spec = SeqEmpty<int>();
+        this.count = 0;
+        this.elems = new [T](100);
+    }
+
+    modifies this, this.elems;  // slightly unfortunate -> still refers to concrete state...
+    ensures this.spec == SeqConcat(old(this.spec), SeqUnit(x));
+    public void add(int x) {
+        synchronized (this) {
+            if (this.count == this.elems.length - 1) {
+                [T] newElems = new [T](this.elems.length + 10);
+                for (int j = 0; j < this.count; j = j + 1)
+                    invariant (forall int i ::0 <= i && i < j ==>(newElems[i] == SeqNth(this.spec, i)));
+                {
+                    newElems[j] = this.elems[j];
+                }
+                this.elems = newElems;
+            }
+
+            this.elems[this.count] = x;
+            this.count = this.count + 1;
+            this.spec = SeqConcat(this.spec, SeqUnit(x));
+        }
+    }
+
+    ensures $result  == (exists int i :: 0 <= i && i < SeqLen(this.spec) && (SeqNth(this.spec, i) == x));
+    public bool contains(int x) {
+        synchronized(this) {
+            for (int j = 0; j < this.count; j = j + 1)
+            invariant (forall int i :: 0 <= i && i < j ==> (SeqNth(this.spec, i) != x));
+            {
+                if (this.elems[j] == x) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+}

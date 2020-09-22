@@ -1,0 +1,24 @@
+
+
+class Ref {
+}
+
+class Node {
+
+    noABA volatile Ref pair  moves_as isLocal(this) ? B # (isLocal(newValue) ? B : E)
+                                                     : N # (isLocal(newValue) ? N : E)
+                     yields_as newValue == this.pair
+                           || (!isLocal(newValue) && !isShared(newValue) && (newValue != null));
+
+    invariant this.pair != null;
+
+    public bool compareAndSet(Node      expectedReference,
+                     Node       newReference,
+                     bool expectedMark,
+                     bool newMark) {
+
+        Ref current = this.pair;
+        return cas(this, pair, current, new Ref());
+    }
+
+}

@@ -1,0 +1,173 @@
+
+class Example1 {
+  volatile int x   moves_as N;
+}
+
+class Example2 {
+  volatile int x   moves_as holds(this) ? B : E;
+}
+
+class Example3 {
+  volatile int data   moves_as isRead ? this.flag ? B : E
+                    : (tid == 0 && !this.flag) ? B : E;
+  volatile bool flag  moves_as isRead ? (this.flag || tid == 0) ? R : N
+                    : (tid == 0 && !this.flag) ? N : E;
+
+
+  public void worker() {
+    if (tid == 0) {
+      if (!this.flag) {
+          this.data = 2;
+          this.flag = true;
+       }
+    } else {
+        while (true) {
+          if (this.flag) {
+            break;
+          }
+          yield;
+        }
+        int y = this.data;
+    }
+  }
+}
+
+
+class Example4 {
+  int counter   moves_as isRead ? guarded_by this
+                       : newValue == this.counter + 1 ? guarded_by this : E
+                yields_as newValue >= this.counter;
+
+  int bump() {
+    synchronized(this) {
+      this.counter = this.counter + 1;
+      return this.counter;
+    }
+  }
+
+  public void r() {
+    int x = this.bump();
+    yield;
+    int y = this.bump();
+    assert y > x;
+  }
+
+
+}
+
+
+class Example3b {
+  volatile int data   moves_as isRead ? this.flag ? B : E
+                    : (tid == 0 && !this.flag) ? B : E;
+  volatile bool flag  moves_as isRead ? (this.flag || tid == 0) ? R : N
+                    : (tid == 0 && !this.flag) ? N : E;
+
+
+  requires tid == 0 && !this.flag;
+  public void initialize() {
+    this.data = 2;
+    this.flag = true;
+  }
+
+  public void work() {
+        while (true) {
+          if (this.flag) {
+            break;
+          }
+          yield;
+        }
+        int y = this.data;
+  }
+}
+
+
+class Example5 {
+  volatile int x  moves_as holds(this) ? B : (isRead ? N : E);
+}
+/*
+(88.3): Example5.x failed Write-Read Right-Mover Check
+
+Validity Check Failed (Write-Read Right-Mover)
+
+    Thread t    : x.x := 7;  [holds(this)  ==>  B]
+    Thread u    : _ := x.x;  [!holds(this) && isRead  ==>  N]
+*/
+
+
+class Example6 {
+  int x moves_as guarded_by this;
+
+  public void f() {
+    acquire(this);
+    this.x = 2;
+    release(this);
+    yield;
+    acquire(this);
+    assert this.x == 2;
+    release(this);
+  }
+}
+
+
+
+class Node {
+  int item  moves_as isLocal(this) ? threadlocal : readonly;
+  Node next moves_as isLocal(this) ? threadlocal : readonly;
+
+  //invariant this.item > 0;
+
+  Node(int item, Node next) {
+    this.item = item;
+    this.next = next;
+  }
+}
+
+
+class Stack {
+
+  Node head moves_as isLocal(this) ? B : guarded_by this;
+
+  //requires item > 0;
+  public int push(int item) {
+    acquire(this);
+    Node node = new Node(item, this.head);
+    this.head = node;
+    release(this);
+  }
+
+  public int pop() {
+    acquire(this);
+    while (this.head == null)
+      invariant holds(this);
+    {
+      release(this);
+      yield;
+      acquire(this);
+    }
+    int value = this.head.item;
+    this.head = this.head.next;
+    release(this);
+    return value;
+  }
+
+  public void buggy() {
+    this.push(10);
+    yield;
+    acquire(this);
+    assert this.head.item == 10;
+    release(this);
+  }
+
+  public void buggy1() {
+    this.push(10);
+    assert this.head.item == 10;
+  }
+
+}
+
+
+///: (106.5): This assertion may not hold.
+///: (157.5): This assertion may not hold.
+///: (85.3): Example5.x failed Write-Read Left-Mover Check
+///: (85.3): Example5.x failed Write-Read Right-Mover Check
+///: (163.5): Reduction failure

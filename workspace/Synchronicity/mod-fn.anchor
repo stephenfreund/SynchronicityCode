@@ -1,0 +1,56 @@
+
+
+axiom (forall int a :: 0 <= a && a < 512 ==> a%512 == a);
+axiom (forall int a :: 0 <= a && a < 512 ==> (512 + a)%512 == a);
+axiom 512 % 512 == 0;
+
+axiom (forall int x, int y :: { (512 + y - (x + 1) % 512) % 512 }
+0 <= x && x < 512 &&
+0 <= y && y < 512 &&
+y != x
+==> (512 + y - x) % 512 - 1 == (512 + y - (x + 1) % 512) % 512);
+
+
+axiom (forall int x, int y :: { (512 + (y + 1) % 512 - x) % 512 }
+0 <= x && x < 512 &&
+0 <= y && y < 512 &&
+(y + 1) % 512 != x
+==> (512 + y - x) % 512 + 1 == (512 + (y + 1) % 512 - x) % 512);
+
+
+class Moo {
+    public void f(int x, int y) {
+        assume 0 <= x && x < 511;
+        assume 0 <= y && y < 512;
+        assert (x + 1) % 512 == x + 1;
+
+//        assert (x + 2) % 512 == x + 2;  // bad
+    }
+
+    requires 0 <= x && x < 512;
+    requires 0 <= y && y < 512;
+    requires (y + 1) % 512 != x;
+    ensures (512 + y - x) % 512 + 1 == (512 + (y + 1) % 512 - x) % 512;
+    public void g(int x, int y) {
+
+
+    }
+
+    requires 0 <= x && x < 512;
+    requires 0 <= y && y < 512;
+    requires y != x;
+    ensures (512 + y - x) % 512 - 1 == (512 + y - (x + 1) % 512) % 512;
+    public void h(int x, int y) {
+
+
+    }
+
+
+    requires 0 <= x && x < 512;
+    requires 0 <= y && y < 512;
+    requires (y + 1) % 512 != x;
+    public void g2(int x, int y) {
+        assert (512 + y - x) % 512 + 1 == (512 + (y + 1) % 512 - x) % 512;
+    }
+}
+

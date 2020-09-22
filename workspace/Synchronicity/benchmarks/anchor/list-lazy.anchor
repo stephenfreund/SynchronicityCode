@@ -1,0 +1,124 @@
+class Node {
+    int item  moves_as isLocal(this) ? threadlocal : readonly;
+    volatile bool marked moves_as isLocal(this) ? threadlocal : write_guarded_by this;
+    volatile Node next moves_as isLocal(this) ? threadlocal : write_guarded_by this;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == INT_MAX;
+
+    Node(int item) {
+      this.item = item;
+    }
+}
+
+class List {
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+
+    public List() {
+      Node tail = new Node(INT_MAX);
+      Node head = new Node(INT_MIN);
+      head.next = tail;
+      this.head = head;
+    }
+
+    bool validate(Node pred, Node curr) {
+      return !pred.marked && !curr.marked && pred.next == curr;
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool add(int item) {
+      while (true) {
+        Node pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (curr.item < item)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant pred.item < item;
+        {
+          pred = curr;
+          yield;
+          curr = curr.next;
+          yield;
+        }
+        synchronized(pred) {
+         synchronized(curr) {
+           if (this.validate(pred, curr)
+                   invariant pred.item < item;
+                   invariant item <= curr.item
+             ) {
+             if (curr.item == item) {
+               return false;
+             } else {
+               Node node = new Node(item);
+               node.next = curr;
+               pred.next = node;
+               return true;
+             }
+           }
+         }
+       }
+       yield;
+     }
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool remove(int item) {
+      while (true) {
+        Node pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (curr.item < item)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant pred.item < item;
+        {
+          pred = curr;
+          yield;
+          curr = curr.next;
+          yield;
+        }
+        synchronized(pred) {
+         synchronized(curr) {
+          if (this.validate(pred, curr)
+               invariant pred.item < item;
+               invariant item <= curr.item
+          ) {
+           if (curr.item == item) {
+             curr.marked = true;
+             yield;
+             pred.next = curr.next;
+             return true;
+           } else {
+             return false;
+           }
+          }
+         }
+        }
+       yield;
+      }
+    }
+
+     requires INT_MIN < item && item < INT_MAX;
+     public bool contains(int item) {
+       while (true) {
+         Node curr = this.head;
+         yield;
+         while (curr.item < item)
+           invariant isShared(curr);
+         {
+           curr = curr.next;
+           yield;
+         }
+         return curr.item == item && !curr.marked;
+       }
+     }
+}

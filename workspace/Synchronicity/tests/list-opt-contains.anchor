@@ -1,0 +1,79 @@
+///: ignore
+
+// scan for insert point first without locks, then ensure no conflicts...
+
+class Node {
+    int item isLocal(this) ? threadlocal : readonly;
+    Node next isLocal(this) ? threadlocal : write_guarded_by this;
+
+    // INT_MIN .. INT_MAX
+    invariant -10000 <= this.item && this.item <= 10000;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == 10000;
+
+    Node(int item) {
+      this.item = item;
+    }
+}
+
+class OptimisticList {
+
+    Node head isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == -10000;
+
+    // Check if pred is still
+    // reachable from head, and that pred.next is still curr.
+    // Must hold pred/curr on entry.
+    bool validate(Node pred, Node curr) {
+        Node node = this.head;
+        yield;
+        while (node.item <= pred.item)
+             invariant holds(pred);
+             invariant holds(curr);
+             invariant isShared(pred);
+             invariant isShared(curr);
+        {
+          if (node == pred)
+          {
+            return pred.next == curr;
+          }
+          node = node.next;
+          yield;
+        }
+        return false;
+    }
+
+     requires -10000 < item && item < 10000;
+     public bool contains(int item) {
+       while (true) {
+         Node pred = this.head;
+         Node curr = pred.next;
+         yield;
+         while (curr.item < item)
+           invariant isShared(curr);
+           invariant isShared(pred);
+           invariant pred.item < item;
+         {
+           pred = curr;
+           yield;
+           curr = curr.next;
+           yield;
+         }
+         acquire(pred);
+         acquire(curr);
+       if (this.validate(pred, curr)
+               invariant pred.item < item;
+               invariant item <= curr.item
+         ) {
+           bool b = (curr.item == item);
+           release(curr);
+           release(pred);
+           return b;
+         }
+       }
+     }
+}

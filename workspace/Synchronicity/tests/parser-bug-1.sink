@@ -1,0 +1,8 @@
+
+class D {
+    void f() {
+        return;
+    }
+}
+
+

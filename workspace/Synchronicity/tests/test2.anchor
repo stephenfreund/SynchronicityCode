@@ -1,0 +1,114 @@
+///: ignore
+
+class Node {
+    int item isLocal(this) ? threadlocal : readonly;
+    Node next isLocal(this) ? threadlocal : write_guarded_by this;
+
+    invariant -5 <= this.item && this.item <= 5;
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == 5;
+}
+
+class OptimisticList {
+
+    Node head isLocal(this) ? threadlocal : readonly;
+    invariant this.head != null && this.head.item == -5;
+
+    bool validate(Node pred, Node curr, int item) {
+        Node node = this.head;
+        yield;
+        while (node.item <= pred.item)
+          invariant isShared(node);
+          invariant a1 ==> isShared(curr);     // UGH
+          invariant a2 ==> isShared(pred);     // UGH
+          invariant a3 ==> holds(curr);        // UGH
+          invariant a4 ==> holds(pred);        // UGH
+          invariant a5 ==> pred.item < item;   // UGH
+          invariant a6 ==> curr.item >= item;  // UGH
+          invariant b1 ==> pred.item > item;   // UGH
+          invariant b2 ==> curr.item <= item;  // UGH
+        {
+          if (node == pred) {
+            return pred.next == curr;
+          }
+          node = node.next;
+          yield;
+        }
+        return false;
+    }
+
+    requires -5 < item && item < 5;
+    public bool add(int item) {
+      while (true) {
+        Node pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (curr.item < item)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant pred.item < item;
+        {
+          pred = curr;
+          yield;
+          curr = curr.next;
+          yield;
+        }
+        yield;
+        acquire(pred);
+        acquire(curr);
+
+       if (this.validate(pred, curr, item)) {
+         if (curr.item == item) {
+           release(curr);
+           release(pred);
+           return false;
+         } else {
+           Node node2 = new Node();
+           node2.item = item;
+           node2.next = curr;
+           pred.next = node2;
+           release(curr);
+           release(pred);
+           return true;
+         }
+       }
+      }
+    }
+
+
+     requires -5 < item && item < 5;
+     public bool contains(int item) {
+       while (true) {
+         Node pred = this.head;
+         Node curr = pred.next;
+         yield;
+         while (curr.item < item)
+           invariant isShared(curr);
+           invariant isShared(pred);
+           invariant pred.item < item;
+         {
+           pred = curr;
+           yield;
+           curr = curr.next;
+           yield;
+         }
+         acquire(pred);
+         acquire(curr);
+         if (this.validate(pred, curr, item)) {
+           bool b = (curr.item == item);
+           release(curr);
+           release(pred);
+           return b;
+         }
+       }
+     }
+}
+
+bool a1;
+bool a2;
+bool a3;
+bool a4;
+bool a5;
+bool a6;
+bool b1;
+bool b2;

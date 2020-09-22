@@ -1,0 +1,8 @@
+
+class Cow {
+	public void f() {
+		assert false;
+	}
+}
+
+///: (4.3): This assertion may not hold.

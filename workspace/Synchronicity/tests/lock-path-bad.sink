@@ -1,0 +1,23 @@
+
+
+class Cow {
+	int x 	guarded_by this.y;
+	Cow y   whenever;
+	  
+	
+	public void f() {
+	    assume this.y != Cow.null;
+		int xx = 0;
+		Cow y := this.y;
+		yield;
+		synchronized(y) {
+			this.x := xx;
+		}
+	}
+}
+
+///: (14.4): Reduction failure
+///: (4.9): yields_as clause for Cow.x is not transitive
+///: (4.2): Cow.x is not Write-Read Stable with respect to Cow.y (case L)
+///: (4.2): Cow.x is not Write-Write Stable with respect to Cow.y (case A.2)
+/// (4.2): Cow.x is not Write-Write Stable with respect to Cow.y (case M) --> only for cas now...

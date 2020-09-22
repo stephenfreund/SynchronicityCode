@@ -1,0 +1,22 @@
+
+class Node {
+    noABA volatile Node next
+      moves_as isRead() ? (this.next != null ? R : N)
+                        : (this.next == null && newValue != null ? N : E)
+      yields_as newValue == this.next || newValue != null;
+
+}
+
+// ///: (3.5): Node.next failed Stable Write-Write Check
+
+/*
+
+(3.5): Node.next failed Stable Write-Write Check
+
+    noABA volatile Node next
+    ^
+    Thread u    : y.next := Node.3;   [!isRead && y.next == null && newValue != null  ==>  N]
+    Thread t    : x.next := Node.2;   [!isRead && x.next == null && newValue != null  ==>  N]
+    Thread u    : y.next := Node.3;   [!isRead && !(y.next == null && newValue != null)  ==>  E]
+
+*/

@@ -1,0 +1,12 @@
+class SyncSpecs {
+  volatile int x   moves_as N;
+  volatile int y   moves_as B;  // <-- invalid    
+  int z            moves_as holds(this) ? B : E;  
+
+  public void double() {  
+     acquire(this);
+     int t = this.z;
+     this.z = 2 * t;
+     release(this);
+  }
+}

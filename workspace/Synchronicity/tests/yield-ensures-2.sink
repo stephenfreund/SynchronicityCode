@@ -1,0 +1,11 @@
+class Cow {
+	int x 	(holds(this) ? B : N) # (holds(this) && newValue > this.x ? N : E)
+	  yields_as newValue >= this.x;
+
+	public void f4() {
+	    int x := this.x;
+        yield;
+	    int this_x := this.x; assert this_x >= x;
+    }
+
+}

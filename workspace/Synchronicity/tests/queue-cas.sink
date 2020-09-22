@@ -1,0 +1,86 @@
+///: ignore
+
+//based on LockFreeQueue from Herlihy + Shavit
+
+class Node {
+    int value isLocal(this) ? threadlocal : readonly;
+    Node next  isLocal(this) ? threadlocal :
+      ((this.next != Node.null ? R : casOK(this.next) ? R : N) // read
+    # ((this.next == Node.null && newValue != Node.null && casOK(this.next)) ? N : E));  // write
+
+}
+
+class Queue {
+
+    Node head isLocal(this) ? threadlocal : N;
+    Node tail isLocal(this) ? threadlocal : N;
+
+    invariant this.head != Node.null;
+    invariant this.tail != Node.null;
+
+    public void enqueue(int value) {
+            Node n = new Node();
+            n.next := Node.null;
+            n.value := value;
+        while(true)
+            invariant isLocal(n);
+            invariant n.next == Node.null;
+        {
+            Node last := this.tail;
+            yield;
+            Node next := last.next;
+            if (next == Node.null) {
+                yield;
+                bool success = last.next @ next :~ n;
+                if (success) {
+                    yield;
+                    bool res = this.tail @ last :~ n;
+                    return;
+                }
+            } else {
+                bool res = this.tail @ last :~ next;
+            }
+            yield;
+        }
+    }
+
+    public int dequeue() {
+        while(true)
+        {
+            Node first := this.head;
+            yield;
+            Node next := first.next;
+            yield;
+            Node last := this.tail;
+            if (first == last) {
+                if (next == Node.null) {
+                    //queue is empty
+                    return -1000; //not ideal but sink has no exceptions
+                } else {
+                  yield;
+                  bool res = this.tail @ last :~ next;
+                }
+            } else {
+                if (next != Node.null) {
+                    int value := next.value;
+                    yield;
+
+                   // assume next == first.next;
+                    bool success = this.head @ first :~ next;
+                    if (success) {
+                        return value;
+                    }
+                }
+            }
+            yield;
+        }
+    }
+
+    void init() {
+        Node sentinel = new Node();
+        this.head := sentinel;
+        this.tail := sentinel;
+    }
+
+}
+

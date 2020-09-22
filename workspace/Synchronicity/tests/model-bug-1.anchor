@@ -1,0 +1,13 @@
+
+class Cow {
+  public void f3() {
+      int i = 9;
+      while (i < 10)
+       invariant i > 5;
+       {
+        i = 4;
+      }
+  }
+}
+
+///: (5.7): invariant i > 5 may not hold

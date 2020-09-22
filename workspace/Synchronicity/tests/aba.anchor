@@ -1,0 +1,28 @@
+
+class ABATest {
+  // good -- this.x is monotonically increasing.
+  noABA int x moves_as isRead() ? guarded_by this : (newValue == this.x + 1 ? guarded_by this : E)
+                 yields_as newValue >= this.x;
+
+  // bad
+  noABA int x2 moves_as isRead() ? guarded_by this : (newValue == this.x + 1 ? guarded_by this : E)
+                 yields_as true;
+
+}
+
+
+class Moo { }
+
+
+class ABATestPtr {
+
+  // good -- yields_as is ugly way of saying newValue is same as old or is local to another thread...
+  noABA Moo x moves_as isRead() ? guarded_by this
+                                           : (isLocal(newValue) ? guarded_by this : E)
+                 yields_as newValue == this.x
+                       || (!isLocal(newValue) && !isShared(newValue) && (newValue != null));
+
+
+}
+
+///: (9.28): ABATest.x2 is not ABA-free

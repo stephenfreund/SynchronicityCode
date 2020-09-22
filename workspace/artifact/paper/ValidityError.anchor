@@ -1,0 +1,3 @@
+class BadDiscipline {
+    volatile int value moves_as isRead() ? B : N;
+}

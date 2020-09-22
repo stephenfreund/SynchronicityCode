@@ -1,0 +1,11 @@
+///: ignore
+//
+
+
+//class Dekker {
+//  array T = int[index == tid ? B#E:B#N]
+//
+//  [T] wantsToEnter  readonly;
+//  int x          whenever;
+//
+// }

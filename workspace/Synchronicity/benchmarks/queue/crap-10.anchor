@@ -1,0 +1,95 @@
+#define Inv(a,h,t)  (a != null && a.length == 512 && 0 <= h && h < 512 && 0 <= t && t < 512 && h <= t)
+#define Pos(x)      (x)
+#define isEmpty(h,t)   (t == h)
+#define isFull(h,t)    ((t) + 1 == 512)
+#define isInHeadToTail(x)  (!isEmpty(this.head, this.tail) && (this.head <= x && x < this.tail))
+#define isInTailToHead(x)  (!isFull(this.head, this.tail)  && (this.tail <= x))
+
+
+#define isEmptier(x)  (this.head <= x && x < 512)
+#define isFuller(x)   (this.tail <= x && x < 512)
+
+class Queue {
+
+    array T = int[moves_as
+    Inv(this.elems, this.head, this.tail) &&
+            (tid == 1 && isInTailToHead(index) ||
+            (tid == 2 && isInHeadToTail(index))) ? B :
+    E
+     ]
+
+    [T] elems moves_as isLocal(this) ? threadlocal : readonly;
+    invariant this.elems != null;
+
+    volatile int tail
+    moves_as isRead() ? tid == 1 ? B : N
+                      : tid == 1 && !isFull(this.head, this.tail) && newValue == Pos(this.tail + 1) ? N : E
+    yielding ((tid == 1 || tid == 2) && Inv(this.elems, this.head, this.tail))
+         ==> (Inv(this.elems, this.head, newValue)
+              && (tid == 1 ==> this.tail == newValue)
+              && (tid == 2 ==> isFuller(newValue) && (!isEmpty(this.head, this.tail) ==> !isEmpty(this.head, newValue))));
+
+
+    //Y(H,H') and Y_x(H', v) ==> Y_x(H, v)
+
+    volatile int head
+    moves_as isRead() ? tid == 2 ? B : N
+                      : tid == 2 && !isEmpty(this.head, this.tail) && newValue == Pos(this.head + 1) ? N : E
+    yielding ((tid == 1 || tid == 2) && Inv(this.elems, this.head, this.tail) ==>
+            (Inv(this.elems, newValue, this.tail)
+             && (tid == 2 ==> this.head == newValue)
+             && (tid == 1 ==> isEmptier(newValue) && (!isFull(this.head, this.tail) ==> !isFull(newValue, this.tail)))));
+
+
+
+    // REP INV:
+    invariant Inv(this.elems, this.head, this.tail);
+
+    // ABSTRACT VARS:
+    ghost Seq<int> spec moves_as E;
+
+    // INVARIANTS TO MAP CONCRETE -> ABSTRACT
+    invariant SeqLen(this.spec) == this.tail - this.head;
+//  invariant SeqLen(this.spec) == (512 + this.tail - this.head) % 512;
+
+    invariant (forall int i :: this.head <= i && i < this.tail ==> (this.elems[i] == SeqNth(this.spec, i - this.head)));
+
+    // ALL SPECS WRITTEN IN TERMS OF ABSTRACT VARS
+    ensures this.spec == SeqEmpty<int>();
+    public Vector() {
+        this.spec = SeqEmpty<int>();
+        this.elems = new [T](512);
+    }
+
+
+    requires tid == 1;
+    modifies this, this.elems;  // slightly unfortunate -> still refers to concrete state...
+    ensures this.spec == old(this.spec) || (this.spec == SeqConcat(old(this.spec), SeqUnit(x)));
+    public void enqueue(int x) {
+        if (!isFull(this.head, this.tail)) {
+            yield;
+            nocheck assert !isFull(this.head, this.tail);
+            this.elems[this.tail] = x;
+            this.spec = SeqConcat(this.spec, SeqUnit(x));
+            this.tail = (this.tail + 1);
+        }
+    }
+
+
+    requires tid == 2;
+    modifies this, this.elems;  // slightly unfortunate -> still refers to concrete state...
+    ensures ($result == 0 && this.spec == old(this.spec))
+            || ($result == old(SeqNth(this.spec, 0)) && this.spec == SeqExtract(old(this.spec), 1, SeqLen(old(this.spec))-1));
+    public int dequeue() {
+        if (!isEmpty(this.head, this.tail)) {
+            yield;
+            int result = this.elems[this.head];
+            this.spec = SeqExtract(this.spec, 1, SeqLen(this.spec)-1);
+            this.head = (this.head + 1);
+            return result;
+        } else {
+            return 0;
+        }
+    }
+
+}

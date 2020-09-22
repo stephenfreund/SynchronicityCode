@@ -1,0 +1,32 @@
+
+class Cow {
+
+  int x whenever;
+  invariant this.x > 0;
+
+  public void f() {
+    yield;
+    this.x := -1;
+    yield;
+    this.x := 2;
+  }
+
+  public void g() {
+    int a = 10;
+    int b = 5;
+    invariant a > b;
+    a = 0;
+    b = -5;
+  }
+
+  public void h() {
+    int a = 10;
+    int b = 5;
+    invariant a > b;
+    a,b = 0,-5;
+  }
+
+}
+
+///: (10.5): Object invariant may not hold.
+///: (18.9): Invariant may not hold.

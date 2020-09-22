@@ -1,0 +1,162 @@
+///: args -timeLimit=600
+
+class Node {
+    int value  moves_as isLocal(this) ? threadlocal : readonly;
+    volatile Node next  moves_as isLocal(this) ? threadlocal : write_guarded_by this.owner;
+    Lock owner moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.owner == this.next.owner;
+    invariant this.owner != null;
+    invariant this.next != null;
+
+    Node(int value, Node next, Lock owner) {
+      this.value = value;
+      this.owner = owner;
+      this.next = next;
+    }
+}
+
+class Lock {
+
+}
+
+class Queue {
+
+    Lock enqLock moves_as isLocal(this) ? threadlocal : readonly
+           yields_as this.enqLock == newValue;
+
+    Lock deqLock moves_as isLocal(this) ? threadlocal : readonly
+           yields_as this.deqLock == newValue;
+
+    volatile Node head moves_as isLocal(this) ? threadlocal : guarded_by this.deqLock;
+    volatile Node tail moves_as isLocal(this) ? threadlocal : guarded_by this.enqLock;
+
+    volatile int size   moves_as   isLocal(this) ? threadlocal :
+                        isRead ? (holds(this) ? B : N)
+                           : holds(this) &&
+                              ((holds(this.enqLock) && newValue == this.size - 1 && 0 < this.size) ||
+                               (holds(this.deqLock) && newValue == this.size + 1 && this.size < this.capacity)) ? N : E
+
+        yields_as (0 <= this.size && this.size <= this.capacity) ==>
+                   ((0 <= newValue && newValue <= this.capacity) &&
+                    (holds(this.enqLock) ==> this.size <= newValue) &&
+                    (holds(this.deqLock) ==> newValue <= this.size));
+
+    int capacity moves_as isLocal(this) ? threadlocal : readonly
+        yields_as this.capacity == newValue;
+
+
+    invariant this.head != null;
+    invariant this.tail != null;
+    invariant this.enqLock != null;
+    invariant this.deqLock != null;
+
+    invariant this.head.owner == this.enqLock;
+    invariant this.tail.owner == this.enqLock;
+
+    invariant this.capacity > 0;
+    invariant 0 <= this.size && this.size <= this.capacity;
+
+    //invariant this.size < this.capacity ==> this.head.next != null;
+    invariant this.head.next != null;  // related to comment below...
+
+    public Queue() {
+        this.enqLock = new Lock();
+        this.deqLock = new Lock();
+
+        // I use an extra dummy node at end to avoid a special invariant about
+        // the case where this.size < this.capacity but this.head.next == null,
+        // which happens at the yield between setting this.head and incrementing size
+        // in dequeue.
+        Node tail = new Node(-1, null, this.enqLock);
+        synchronized(this.enqLock) {
+          tail.next = tail;
+        }
+        Node head = new Node(0, tail, this.enqLock);
+        this.head = head;
+        this.tail = head;
+        this.capacity = 1024;
+        this.size = this.capacity;
+    }
+
+    // next two are from AtomicInteger -- could use cas instead...
+    int getAndDecSize() {
+      synchronized(this) {
+        int s = this.size;
+        assert 0 < s && s <= this.capacity;
+        this.size = s - 1;
+        return s;
+      }
+    }
+
+    int getAndIncSize() {
+      synchronized(this) {
+        int s = this.size;
+        this.size = s + 1;
+        return s;
+      }
+    }
+
+
+    public void enqueue(int value) {
+      bool mustWakeDequeuers = false;
+      Lock l = this.enqLock;
+      synchronized(l) {
+          while (true)
+            invariant holds(l);
+            invariant l == this.enqLock;
+          {
+            if (this.size > 0) {
+              break;
+            }
+            wait(l);
+          }
+          yield;
+          Node e = new Node(value, this.tail.next, this.enqLock);
+          this.tail.next = e;
+          this.tail = e;
+          yield;
+          if (this.getAndDecSize() == this.capacity) {
+            mustWakeDequeuers = true;
+          }
+      }
+      yield;
+      if (mustWakeDequeuers) {
+        synchronized(this.deqLock) {
+          notify(this.deqLock);
+        }
+      }
+    }
+
+    public int dequeue() {
+      bool mustWakeEnqueuers = false;
+      int result;
+      Lock l = this.deqLock;
+      synchronized(l) {
+          while (true)
+            invariant holds(l);
+            invariant l == this.deqLock;
+          {
+            if (this.size < this.capacity) {
+              break;
+            }
+            wait(l);
+          }
+          yield;
+          Node next = this.head.next;
+          result = next.value;
+          this.head = next;
+          yield;
+          if (this.getAndIncSize() == 0) {
+            mustWakeEnqueuers = true;
+          }
+      }
+      yield;
+      if (mustWakeEnqueuers) {
+        synchronized(this.enqLock) {
+          notify(this.enqLock);
+        }
+      }
+      return result;
+    }
+}

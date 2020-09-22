@@ -1,0 +1,21 @@
+class Mutex {
+  int m N#N;
+}
+
+class Test {
+  Mutex m B#E;
+
+  public Mutex f() {
+    Mutex m := this.m;
+    invariant m == this.m;
+    int i = 0;
+    while (i < 10)
+    {
+      yield;
+      i = i + 1;
+    }
+    Mutex this_m := this.m;
+    assert this_m == m;
+    return m;
+  }
+}

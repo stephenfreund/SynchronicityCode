@@ -1,0 +1,37 @@
+///: args -verify=Houdini
+
+
+
+class Inc {
+
+    int x isLocal(this) ? E :
+       isRead ?
+                (holds(this) ? B : N)
+              : (holds(this) ? N : E);
+
+    int y isLocal(this) ? E :
+       isRead ?
+                (holds(this) ? E : E)
+              : (holds(this) ? E : E);
+
+	public void inc()  {
+	  synchronized(this) {
+	    this.x := 0;
+	    	  int t := this.x;
+
+	  }
+	  yield;
+	  int t := this.x;
+	}
+
+	public void inc2()  {
+	  synchronized(this) {
+	    this.y := 0;
+	    this.x := 0;
+	  }
+	  yield;
+	  int t := this.x;
+	}
+}
+
+///: (29.6): Reduction failure

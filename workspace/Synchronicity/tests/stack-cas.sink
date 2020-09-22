@@ -1,0 +1,64 @@
+
+class Node {
+	int value  isLocal(this) ? threadlocal : readonly;
+	Node next  isLocal(this) ? threadlocal : readonly;
+}
+
+class Stack {
+
+	Node top isLocal(this) ? threadlocal : N;
+
+	public void push(int v) {
+			while (true) {
+				Node next := this.top;
+                Node nu = new Node();
+                nu.value := v;
+				nu.next := next;
+				yield;
+				bool result = this.top@next :~ nu;
+				if (result) {
+				    break;
+				}
+				yield;
+			}
+			return;
+	}
+
+	public void push2(int v) {
+            Node nu = new Node();
+            nu.value := v;
+			while (true)
+			    invariant isLocal(nu);
+			{
+				Node next := this.top;
+				nu.next := next;
+				yield;
+				bool result = this.top@next :~ nu;
+				if (result) {
+				    break;
+				}
+				yield;
+			}
+			return;
+	}
+
+	public int pop() {
+	    while (true)
+	    {
+	        Node top := this.top;
+	        if (top == Node.null) {
+	            return -1;
+	        }
+	        yield;
+	        Node next := top.next;
+	        bool result = this.top@top :~ next;
+	        if (result) {
+	            int value := top.value;
+	            return value;
+	        }
+	        yield;
+	    }
+	    return -1;
+	}
+
+}

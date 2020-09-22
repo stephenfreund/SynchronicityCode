@@ -1,0 +1,22 @@
+
+class Lock { }
+
+class HashSet {
+
+    array LOCK = Lock[moves_as isLocal(athis) ? B : readonly]
+
+    [LOCK] locks  moves_as isLocal(this) ? threadlocal : readonly;
+
+    int a   moves_as isLocal(this) ? threadlocal : (this.locks.length > 0 && (forall int i :: 0 <= i && i < this.locks.length ==> isShared(this.locks[i]) && holds(this.locks[i])) ? B : E);
+
+    invariant this.locks != null;
+
+}
+
+///: (10.22): yields_as clause for HashSet.a is not valid
+///: (10.5): HashSet.a failed Read-Write Left-Mover Check
+///: (10.5): HashSet.a failed Read-Write Right-Mover Check
+///: (10.5): HashSet.a failed Write-Read Left-Mover Check
+///: (10.5): HashSet.a failed Write-Read Right-Mover Check
+///: (10.5): HashSet.a failed Write-Write Left-Mover Check
+///: (10.5): HashSet.a failed Write-Write Right-Mover Check

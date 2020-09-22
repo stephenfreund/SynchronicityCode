@@ -1,0 +1,189 @@
+class Node {
+    int item  moves_as isLocal(this) ? threadlocal : readonly;
+    Node next moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == INT_MAX;
+
+    Node(int item) {
+      this.item = item;
+    }
+}
+
+
+class List {
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+
+    public List() {
+      Node tail = new Node(INT_MAX);
+      Node head = new Node(INT_MIN);
+      head.next = tail;
+      this.head = head;
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    Node pred;
+    {
+      ensures pred == this.head && holds(pred);
+    }
+    yield;
+    {
+      ensures old(holds(pred));
+      ensures old(pred.next.item) < item && pred == old(pred.next);
+      ensures !holds(old(pred)) && holds(pred);
+    }*
+      yield;
+    {
+        modifies pred;
+        ensures old(holds(pred)) && !holds(pred);
+        ensures old(pred.next.item) >= item;
+        ensures old(pred.next.item) == item ==> !$result;
+        ensures old(pred.next.item) > item  ==> $result && pred.next.item == item && pred.next.next == old(pred.next);
+    }
+    public bool add(int item) {
+        acquire(this.head);
+        pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (true)
+            invariant isShared(curr);
+            invariant isShared(pred);
+            invariant pred.item < item;
+            invariant holds(pred);
+            invariant curr == pred.next;
+            invariant curr.item < item ==> nextSpecStep(1);
+            invariant curr.item >= item ==> nextSpecStep(2);
+        {
+            acquire(curr);
+            if (curr.item >= item) {
+              break;
+            }
+            release(pred);
+            pred = curr;
+            curr = curr.next;
+            yield;
+        }
+
+        if(item == curr.item) {
+            release(curr);
+            release(pred);
+            return false;
+        } else {
+            Node node = new Node(item);
+            node.next = curr;
+            pred.next = node;
+            release(curr);
+            release(pred);
+            return true;
+        }
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    Node pred;
+    {
+        ensures pred == this.head && holds(pred);
+    }
+    yield;
+    {
+        ensures old(holds(pred));
+        ensures old(pred.next.item) < item && pred == old(pred.next);
+        ensures !holds(old(pred)) && holds(pred);
+    }*
+    yield;
+    {
+        modifies pred;
+        ensures old(holds(pred)) && !holds(pred);
+        ensures old(pred.next.item) >= item;
+        ensures old(pred.next.item) == item ==> $result &&  pred.next == old(pred.next.next);
+        ensures old(pred.next.item) > item  ==> !$result;
+    }
+    public bool remove(int item) {
+        acquire(this.head);
+        pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (true)
+            invariant isShared(curr);
+            invariant isShared(pred);
+            invariant pred.item < item;
+            invariant holds(pred);
+            invariant curr == pred.next;
+            invariant curr.item < item ==> nextSpecStep(1);
+            invariant curr.item >= item ==> nextSpecStep(2);
+            {
+                acquire(curr);
+                if (curr.item >= item) {
+                    break;
+                }
+                release(pred);
+                pred = curr;
+                curr = curr.next;
+                yield;
+            }
+        if(item == curr.item) {
+            pred.next = curr.next;
+            release(curr);
+            release(pred);
+            return true;
+        } else {
+            release(curr);
+            release(pred);
+            return false;
+        }
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    Node pred;
+    {
+        modifies old(pred), pred;
+        ensures pred == this.head;
+        ensures holds(pred);
+    }
+    yield;
+    {
+        modifies old(pred), pred;
+        ensures old(pred.item) < item && pred == old(pred.next);
+    }*
+    yield;
+    {
+        modifies pred;
+        ensures $result == (pred.next.item == item);
+    }
+    public bool contains(int item) {
+        acquire(this.head);
+        pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (true)
+            invariant isShared(curr);
+            invariant isShared(pred);
+            invariant pred.item < item;
+            invariant holds(pred);
+            invariant curr == pred.next;
+            invariant curr.item < item ==> nextSpecStep(1);
+            invariant curr.item >= item ==> nextSpecStep(2);
+            {
+                acquire(curr);
+                if (curr.item >= item) {
+                    break;
+                }
+                release(pred);
+                pred = curr;
+                curr = curr.next;
+                yield;
+            }
+        bool result = (item == curr.item);
+        release(curr);
+        release(pred);
+        return result;
+    }
+
+}

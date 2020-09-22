@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Synchronicity">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/scalatest_2.12-3.0.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/scalactic_2.12-3.0.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/scala-parser-combinators_2.12-1.0.7.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

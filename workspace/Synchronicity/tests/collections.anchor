@@ -1,0 +1,29 @@
+
+
+class Cow {
+    public void f() {
+        Set<int> s;
+        s = SetEmpty<int>();
+        s = SetAdd(s, 4);
+        assert SetContains(s, 4);
+        assert !SetContains(s, 3);
+        s = SetAdd(s, 3);
+        assert SetContains(s, 3);
+
+        Set<Set<int>> ss;
+    }
+
+    public void g() {
+        Set<int> s;
+        Set<Set<int>> ss;
+        s = SetEmpty<int>();
+        ss = SetEmpty<Set<int>>();
+        s = SetAdd(s, 4);
+        s = SetAdd(s, 5);
+        s = SetAdd(s, 6);
+        ss = SetAdd(ss, s);
+        assert SetContains(ss, s);
+        s = SetAdd(s, 7);
+        assert !SetContains(ss, s);
+    }
+}

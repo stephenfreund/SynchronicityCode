@@ -1,0 +1,29 @@
+///: ignore
+
+class Perf {
+
+ // volatile int a  moves_as whenever;
+
+  public void f0() { }
+  public void f10() {
+     yield; yield; yield; yield; yield; yield; yield; yield; yield; yield;
+  }
+  public void f20() { this.f10(); this.f10(); }
+  public void f30() { this.f20(); this.f10(); }
+  public void f40() { this.f30(); this.f10(); }
+  public void f50() { this.f40(); this.f10(); }
+  public void f60() { this.f50(); this.f10(); }
+  public void f70() { this.f60(); this.f10(); }
+  public void f80() { this.f70(); this.f10(); }
+  public void f90() { this.f80(); this.f10(); }
+  public void f100() { this.f90(); this.f10(); }
+  public void f200() { this.f100(); this.f100(); }
+  public void f300() { this.f200(); this.f100(); }
+  public void f400() { this.f300(); this.f100(); }
+  public void f500() { this.f400(); this.f100(); }
+  public void f600() { this.f500(); this.f100(); }
+  public void f700() { this.f600(); this.f100(); }
+  public void f800() { this.f700(); this.f100(); }
+//  public void f900() { this.f800(); this.f100(); }
+//  public void f1000() { this.f900(); this.f100(); }
+}

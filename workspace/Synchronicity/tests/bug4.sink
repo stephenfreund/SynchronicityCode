@@ -1,0 +1,30 @@
+class Mutex {
+  int m N#N;
+}
+
+class Test {
+  Mutex m B#E;
+
+  public Mutex f() {
+    Mutex m := this.m;
+    int i = 0;
+    bool z = i < 10; while (z)
+{
+     invariant  this.m == m;
+     yield;
+     i = i + 1; z = i < 10;
+    }
+    z = i < 20; while (z)
+    {
+      yield;
+      i = i + 1;
+     // m = Mutex.null; z = i < 10;
+    }
+    Mutex this_m := this.m;
+    assert this_m == m;
+    return m;
+  }
+}
+
+
+///: (24.5): This assertion may not hold.

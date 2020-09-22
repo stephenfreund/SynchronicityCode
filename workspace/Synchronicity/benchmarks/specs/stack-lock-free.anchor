@@ -1,0 +1,60 @@
+
+class Node {
+	int value  moves_as isLocal(this) ? threadlocal : readonly;
+	Node next  moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != this;
+    invariant this.value >= 0;
+
+	Node(int value, Node next) {
+	  this.value = value;
+	  this.next = next;
+	}
+}
+
+class Stack {
+
+  volatile Node top moves_as isLocal(this)
+      ? threadlocal
+      : N;
+
+  ensures this.top == null;
+  public Stack() {
+    this.top = null;
+  }
+
+  	requires v >= 0;
+  	modifies this;
+    ensures this.top != null && this.top.next == old(this.top) && this.top.value == v;
+	public void push(int v) {
+        while (true)
+//          invariant nextSpecStep(0);
+        {
+            Node next = this.top;
+            Node nu = new Node(v, next);
+            yield; // needed because top has ABA traces: other thread pushes/pops item here...
+            if (cas(this, top, next, nu)) {
+              break;
+            }
+    	    yield;
+          }
+	}
+
+	modifies this, $result;
+    ensures (old(this.top) != null && this.top == old(this.top.next) && $result == old(this.top.value));
+	public int pop() {
+	    while (true)
+//			invariant nextSpecStep(0);
+		{
+	        Node top = this.top;
+	        if (top != null){
+			yield; // needed because top has ABA traces: other thread pushes/pops item here...
+			Node next = top.next;
+			if (cas(this, top, top, next)) {
+				return top.value;
+			}
+		}
+			yield;
+	    }
+	}
+}

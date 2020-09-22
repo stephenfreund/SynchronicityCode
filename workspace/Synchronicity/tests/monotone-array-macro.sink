@@ -1,0 +1,65 @@
+
+class SX {
+
+    array T = int[(!this.b)
+                   ? guarded_by this
+                   : (((holds(this) || tid == index) ? B:E) # ((holds(this) && tid == index) ? B:E))]
+
+    // monotone false -> true.
+    bool b  (!this.b) ? write_guarded_by this : (R#E);
+
+    [T] a (!this.b) ? guarded_by this : write_guarded_by this;
+
+    public void notSharedYetWrite() {
+        bool temp := this.b;
+        if (!temp) {
+            yield;
+            synchronized(this) {
+                [T] a := this.a;
+                a[tid] := 3;
+            }
+        }
+    }
+
+    public void shared() {
+        bool temp := this.b;
+        if (temp) {
+            synchronized(this) {
+                [T] a := this.a;
+                a[tid] := 3;
+            }
+        }
+    }
+        public void sharedBad() {
+            bool temp := this.b;
+            if (temp) {
+                synchronized(this) {
+                    [T] a := this.a;
+                    a[0] := 3;
+                }
+            }
+        }
+
+        public void sharedRead1() {
+            bool temp := this.b;
+            if (temp) {
+                synchronized(this) {
+                    [T] a := this.a;
+                    int y := a[0];
+                }
+            }
+        }
+
+        public void sharedRead2Bad() {
+            bool temp := this.b;
+            if (temp) {
+                    [T] a := this.a;
+                    if (tid < a.length) {
+                        int y := a[tid];
+                     }
+            }
+        }
+}
+
+///: (38.21): Reduction failure
+///: (58.25): Cannot have potential null deference in left-mover part.

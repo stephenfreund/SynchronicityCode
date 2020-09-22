@@ -1,0 +1,42 @@
+class Node {
+  int item  moves_as isLocal(this) ? threadlocal : readonly;
+  Node next moves_as isLocal(this) ? threadlocal : readonly;
+
+  Node(int item, Node next) {
+    this.item = item;
+    this.next = next;
+  }
+}
+
+class LockBasedStack {
+
+  volatile Node head moves_as isLocal(this) ? B : guarded_by this;
+
+  modifies this;
+  ensures this.head.next == old(this.head) && this.head.item == item;
+  public void push(int item) {
+    acquire(this);
+    Node node = new Node(item, this.head);
+    this.head = node;                      // Line 20: Comment me out to see an error!
+    release(this);
+  }
+
+  modifies this;
+  ensures old(this.head) != null;
+  ensures $result == old(this.head.item) && this.head == old(this.head.next);
+  public int pop() {
+    while (true) {
+      acquire(this);
+      if (this.head != null) {
+        break;
+      }
+      release(this);
+      yield;
+    }
+    int value = this.head.item;
+    this.head = this.head.next;
+    release(this);
+    return value;
+  }
+}
+

@@ -1,0 +1,39 @@
+
+
+class List {
+
+    volatile int x moves_as guarded_by this;
+
+    int pred;
+
+    {
+        ensures pred == old(this.x);
+    }
+    yield;
+    {
+        ensures old(pred) < 10;
+        ensures pred == old(pred) + 1;
+    }*
+    yield;
+    {
+        ensures old(pred) >= 10;
+    }
+    public bool add(int item) {
+        synchronized(this) {
+            pred = this.x;
+            this.x = 0;
+        }
+        yield;
+         while (true)
+            invariant pred < 10 ==> nextSpecStep(1);
+            invariant pred >= 10 ==> nextSpecStep(2);
+        {
+            if (pred >= 10) {
+              break;
+            }
+            pred = pred + 1;
+            yield;
+        }
+         return false;
+    }
+}

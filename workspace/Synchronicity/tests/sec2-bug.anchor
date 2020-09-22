@@ -1,0 +1,59 @@
+
+class Lock { }
+
+class Buffer {
+  Lock popLock      moves_as  readonly;
+  Lock pushLock     moves_as  readonly;
+
+ volatile  bool full         moves_as  isRead ? (holds(this.popLock) ? (this.full ? R : N)
+                               : holds(this.pushLock) ? (this.full ? N : R)
+                               : E)
+                            : (holds(this) && holds(this.popLock) ? (this.full && !newValue ? N : E)
+                               : holds(this) && holds(this.pushLock) ? (!this.full && newValue ? N : E)
+                               : E);
+
+  volatile int data          moves_as  isRead ? holds(this.popLock) && this.full ? B : E
+                            : holds(this.pushLock) && holds(this) && !this.full ? B : E;
+
+
+  invariant this.popLock != this.pushLock;
+  invariant this.popLock != null;
+  invariant this.pushLock != null;
+
+  requires !holds(this.popLock);
+  requires !holds(this.pushLock);
+  public void push(int x) {
+    synchronized(this.pushLock) {
+        while (true)
+          invariant holds(this.pushLock);
+          invariant !holds(this.popLock);
+        {
+          if (!this.full) { break; }
+          yield;
+        }
+        synchronized(this) {
+            this.data = x;
+            this.full = true;
+        }
+    }
+  }
+
+  requires !holds(this.popLock);
+  requires !holds(this.pushLock);
+  public int pop() {
+    synchronized(this.popLock) {
+        while (true)
+          invariant holds(this.popLock);
+          invariant !holds(this.pushLock);
+        {
+          if (this.full) { break; }
+          yield;
+        }
+        synchronized(this) {
+            int result = this.data;
+            this.full = false;
+            return result;
+        }
+    }
+  }
+}

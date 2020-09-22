@@ -1,0 +1,23 @@
+
+
+class Example {
+
+	bool flag  N; // !this.flag ? write_guarded_by this : R#E;
+	int y      !this.flag ? B#E : L#E;
+
+}
+
+
+class Example2 {
+
+	bool flag  N; // !this.flag ? write_guarded_by this : R#E;
+	int y      !this.flag ? B#E : R#E;
+
+}
+
+
+///: (6.13): yields_as clause for Example.y is not transitive
+///: (14.2): Example2.y is not Read-Write Stable with respect to Example2.flag (case F)
+///: (14.2): Example2.y is not Write-Read Stable with respect to Example2.flag (case K)
+///: (6.2): Example.y is not Read-Write Stable with respect to Example.flag (case F)
+///: (6.2): Example.y is not Write-Read Stable with respect to Example.flag (case K)

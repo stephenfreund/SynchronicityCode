@@ -1,0 +1,36 @@
+///: ignore
+
+class Node {
+	int value  isLocal(this) ? threadlocal : guarded_by s;
+	Node next  isLocal(this) ? threadlocal : guarded_by s;
+}
+
+class Stack {
+
+	Node top guarded_by this;
+
+	public void push(int v) {
+			Node nu = new Node();
+			nu.value := v;
+			synchronized(this) {
+				Node next := this.top;
+				nu.next := next;
+				this.top := nu;
+			}
+	}
+
+	public int pop() {
+		synchronized(this) {
+			Node t := this.top;
+			if (t == Node.null) {
+			  return -1;
+			}
+			Node next := t.next;
+			this.top := next;
+			int result := t.value;
+			return result;
+		}
+	}
+}
+
+Stack s;

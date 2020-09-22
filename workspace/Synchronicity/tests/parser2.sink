@@ -1,0 +1,10 @@
+
+class Node {
+    int x whenever;
+    public void f() {
+      int y;
+      int z;
+      int x;
+      x = y + y + y + y + y * z;
+    }
+}

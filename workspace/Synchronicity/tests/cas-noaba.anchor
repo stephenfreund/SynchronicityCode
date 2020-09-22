@@ -1,0 +1,12 @@
+class Inc2 {
+
+    volatile int counter  moves_as isRead() ? N : (newValue == this.counter + 1 ? N : E)
+    yields_as newValue >= this.counter;
+
+    public void inc() {
+        int nnn = this.counter;
+        bool x = cas(this,counter,nnn,nnn+1);
+    }
+}
+
+///: (8.9): Reduction failure

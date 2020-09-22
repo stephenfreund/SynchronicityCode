@@ -1,0 +1,48 @@
+
+class Cow {
+    array T = int[guarded_by this]
+    array S = int[guarded_by this]
+    [T] a readonly;
+    [S] b readonly;
+
+    int get(int index) {
+        [T] a := this.a;
+        int v := a[index];
+        return v;
+    }
+
+    void set(int index, int value) {
+        [T] a := this.a;
+        a[index] := value;
+    }
+
+    void cow(int index, int value) {
+        this.set(index, value);
+    }
+
+    public void f0() {
+        [T] a := this.a;
+        this.set(0, 0);
+    }
+
+    public void f1() {
+        synchronized(this) {
+            this.set(0, 0);
+        }
+    }
+
+    public void f2() {
+        synchronized(this) {
+            this.cow(0, 1);
+        }
+    }
+
+    public void f3() {
+             synchronized(this) {
+                 int y = this.get(1);
+                 this.cow(0, y);
+             }
+         }
+}
+
+///: (16.9): Reduction failure

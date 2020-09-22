@@ -1,0 +1,20 @@
+///: ignore
+
+class Mutex {
+
+	int m   isLocal(this)         ? (B # (((this.m == Tid.null && newValue == tid) ||
+                                       (this.m == tid && newValue == Tid.null)) ? B : E))
+                                : (  (casOK(this.m) || this.m == tid ? R : N)
+                                        # (casOK(this.m) && ((this.m == Tid.null && newValue == tid) ||
+                                                                (this.m == tid && newValue == Tid.null)) ? N : E )) !;
+}
+
+
+class Test {
+
+    Mutex m  B#E;
+    int x    this.m.m == tid ? B:E;
+
+    invariant this.m != Mutex.null;
+
+ }

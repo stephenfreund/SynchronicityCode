@@ -1,0 +1,23 @@
+
+class Stack {
+
+  volatile int top moves_as isLocal(this)
+      ? threadlocal
+      : N;
+
+    ensures this.top == old(this.top) + 1;
+	public void push(int v) {
+        while (true)
+        //invariant nextSpecStep(0);
+        {
+            int x = this.top;
+            if (cas(this, top, x, x + 1)) {
+                break;
+            }
+            yield;
+        }
+	}
+
+}
+
+///: (14.13): Reduction failure

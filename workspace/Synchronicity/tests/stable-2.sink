@@ -1,0 +1,18 @@
+///: ignore
+class MutexOriginal {
+
+	int m     N // not strong enough to ensure right-mover reads with yield-based stability check.  passes the new checks.
+               # ((casOK(this.m) && ((this.m == -1 && newValue == tid) ||
+                                         (this.m == tid && newValue == -1))) ? N : E );
+
+}
+
+class Mutex {
+
+	int m     (casOK(this.m) ? R : N)
+               # ((casOK(this.m) && ((this.m == -1 && newValue == tid) ||
+                                         (this.m == tid && newValue == -1))) ? N : E );
+
+}
+
+///: (4.2): MutexOriginal.m failed Stable Write Check

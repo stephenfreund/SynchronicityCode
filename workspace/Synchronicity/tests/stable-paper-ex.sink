@@ -1,0 +1,49 @@
+
+// this is ok
+class Example {
+
+	bool flag  !this.flag ? write_guarded_by this : R#E;
+	int y      !this.flag ? write_guarded_by this : readonly;
+
+}
+
+// this is bad:
+//     Thread u    : y.y := _;   [!(y.flag) && !(isRead)  ==>  N]
+//     Thread t    : y.flag := true;  ==> B
+//     Thread u    : y.y := _;   [y.flag && !(isRead)  ==>  E]
+
+class Example2 {
+
+	bool flag  !this.flag ? write_guarded_by this : R#E;
+	int y      !this.flag ? whenever : readonly;
+
+}
+
+// ok.
+class Example3 {
+
+	bool flag  N#(newValue&&holds(this) ? N:E)
+	           yields_as this.flag ==> newValue;
+
+	int y      !this.flag ? guarded_by this : readonly;
+
+}
+
+// bad
+//     Thread u    : y.y := _;   [!(y.flag) && (y._lock==u)  ==>  B]
+//     Thread t    : y.flag := true;
+//     Thread u    : y.y := _;   [y.flag && !(isRead)  ==>  E]
+class Example4 {
+
+	bool flag  N#(newValue ? N:E)
+	           yields_as this.flag ==> newValue;
+
+	int y      !this.flag ? guarded_by this : readonly;
+}
+
+///: (18.2): Example2.y is not Write-Read Stable with respect to Example2.flag (case K)
+///: (41.2): Example4.y is not Write-Write Stable with respect to Example4.flag (case A.2)
+///: (6.2): Example.y is not Write-Read Stable with respect to Example.flag (case K)
+
+/// (18.2): Example2.y is not Write-Write Stable with respect to Example2.flag (case M)
+/// (41.2): Example4.y is not Write-Write Stable with respect to Example4.flag (case M)

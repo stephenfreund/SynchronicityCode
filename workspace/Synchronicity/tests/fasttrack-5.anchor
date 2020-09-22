@@ -1,0 +1,173 @@
+class VarState {
+
+    array VarState_VC = int[
+        moves_as isLocal(athis) ? B
+                           : (this.read != -1)
+                               ? guarded_by this
+                               : (((holds(this) || tid == index) ? B:E) # ((holds(this) && tid == index) ? B:E))
+    ]
+
+
+    volatile int read  moves_as (this.read != -1) ? (holds(this) ? B#N : N#E)
+                                : R#E;
+
+    volatile int write  moves_as write_guarded_by this;
+    volatile [VarState_VC] readVC moves_as  (this.read != -1) ? guarded_by this : write_guarded_by this;
+
+    invariant isShared(this) ==> this.readVC != null;
+
+    int get(int i) {
+        [VarState_VC] readVC = this.readVC;
+        return (i < readVC.length) ? readVC[i] : 0;
+     }
+
+    void ensureCapacity(int n) {
+        [VarState_VC] readVC = this.readVC;
+
+        if (n > readVC.length) {
+            [VarState_VC] newVC = new [VarState_VC](n);
+            int i = 0;
+            while (i<n) {
+                newVC[i] = readVC[i];
+                i = i + 1;
+            }
+            this.readVC = newVC;
+         }
+    }
+
+    void set(int index, int value) {
+        this.ensureCapacity(index + 1);
+        this.readVC[index] = value;
+     }
+
+    int size() {
+        return this.readVC.length;
+     }
+
+     int max(int v1, int v2) {
+         return (v1 < v2) ? v2 : v1;
+      }
+
+      int TID(int e) {
+          return e % 256;
+      }
+
+      bool LEQ(int e1, int e2) {
+          int v1 = this.TID(e1);
+          int v2 = this.TID(e2);
+          return v1 == v2 && e1 < e2;
+      }
+
+
+      bool leq(ThreadState st) {
+        int l1 = this.size();
+        int l2 = st.size();
+        int n = this.max(l1, l2);
+        int i = 0;
+        while (i < n) {
+            int v1 = this.get(i);
+            int v2 = st.get(i);
+            bool l = this.LEQ(v1, v2);
+            if (!l) {
+                return false;
+            }
+            i =i + 1;
+        }
+        return true;
+      }
+
+}
+
+class ThreadState {
+
+    array ThreadState_VC = int[moves_as tid == this.t ? B:E ]
+
+    Tid t                   moves_as readonly;
+    [ThreadState_VC] stV    moves_as tid == this.t ? B:E;
+
+    invariant (forall int _i :: this.stV[_i] >= 0);
+
+
+    int TID(int e) {
+        return e % 256;
+    }
+    bool LEQ(int e1, int e2) {
+        int v1 = this.TID(e1);
+        int v2 = this.TID(e2);
+        return v1 == v2 && e1 < e2;
+    }
+
+    int get(int i) {
+        [ThreadState_VC] stV = this.stV;
+        return (i < stV.length) ? stV[i] : 0;
+     }
+
+     int size() {
+         return this.stV.length;
+      }
+
+
+    requires tid == this.t;
+    public bool write(VarState sx) {
+
+        int e = this.get(this.t);
+        int w = sx.write;
+        if (w == e) { return true; }
+        yield;
+        synchronized(sx) {
+            int ww = this.get(w);
+            if (w > ww) { return false; }
+            int r = sx.read;
+            if (r != -1) {
+                int rr = this.get(r);
+                if (r > rr) { return false; }
+                sx.write = e;
+            } else {
+                if (!sx.leq(this)) {
+                   return false;
+                }
+                sx.write = e;
+            }
+        }
+        return true;
+    }
+
+    requires tid == this.t;
+    public bool read(VarState sx) {
+        int t = this.t;
+        int e = this.get(t);
+
+        int r = sx.read;
+        if (r == e) {
+            return true;
+        } else {
+            if (r == -1) {
+                assert sx.read == -1;  // sanity check...
+                int readVCt = sx.get(t);
+                if (readVCt == e) { return true; }
+            }
+        }
+        yield;
+
+        synchronized(sx) {
+            int w = sx.write;
+            int ww = this.get(w);
+            if (w > ww) { return false; }
+            r = sx.read;
+            if (r != -1) {
+                int rr = this.get(r);
+                if (r > rr) {
+                    sx.read = e;
+                } else {
+                    sx.set(r, r);
+                    sx.set(t, e);
+                    sx.read = -1;
+                }
+            } else {
+                    sx.set(t, e);
+            }
+        }
+        return true;
+    }
+
+}

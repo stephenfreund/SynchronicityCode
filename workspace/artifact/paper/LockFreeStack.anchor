@@ -1,0 +1,40 @@
+class Node {
+  int item  moves_as isLocal(this) ? threadlocal : readonly;
+  Node next moves_as isLocal(this) ? threadlocal : readonly;
+
+  Node(int item, Node next) {
+    this.item = item;
+    this.next = next;
+  }
+}
+
+class LockFreeStack {
+
+  volatile Node head moves_as isLocal(this) ? B : N;
+
+  public void push(int item) {
+    while (true) {
+      Node next = this.head;
+      Node nu = new Node(item, next);
+      yield;
+      if (cas(this, head, next, nu)) {
+        break;
+      }
+    }
+  }
+
+  public int pop() {
+    while (true) {
+      Node top = this.head;
+      if (top != null) {
+        Node next = top.next;
+        yield;
+        if (cas(this, head, top, next)) {
+          return top.item;
+        }
+      }
+      yield;
+    }
+  }
+}
+

@@ -1,0 +1,27 @@
+
+class Cow {
+	int x 	isLocal(this) ? threadlocal : guarded_by this.y;
+	Cow y   isLocal(this) ? threadlocal : readonly;
+	invariant this.y != Cow.null;
+	public void f() {
+		while (true)
+		{
+			yield; // BAD
+			Cow y := this.y;
+			synchronized(y) {
+			}
+		}
+	}
+
+	public void f2() {
+		while (true)
+		{
+			Cow y := this.y;
+			synchronized(y) {
+			}
+			yield; // OK
+		}
+	}
+}
+
+///: (7.3): Phase must be invariant at loop head

@@ -1,0 +1,10 @@
+
+class Ok {
+  int y moves_as guarded_by this;
+  public void inc()  {
+	synchronized(this) {
+	  this.y = this.y + 1;
+	}
+  }
+}
+

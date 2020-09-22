@@ -1,0 +1,167 @@
+#!/bin/bash
+
+ROUNDS=20
+
+echo Language, ADT, Threads, Time
+
+
+##
+
+mkdir -p /tmp/classes
+javac -d /tmp/classes/ -classpath ${ANCHOR_HOME}/benchmarks/Herlihy-Shavit/ ${ANCHOR_HOME}/benchmarks/performance-tests/herlihy-shavit/queue/*.java
+
+for T in BoundedQueue LockFreeQueue
+do
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes/ ${T}PerformanceTest 500000 $N $ROUNDS
+    echo Java, $T, $N, `java -classpath /tmp/classes/ ${T}PerformanceTest 500000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+##
+
+mkdir -p /tmp/classes-int
+javac -d /tmp/classes-int/ -classpath ${ANCHOR_HOME}/benchmarks/Herlihy-Shavit-Int/ ${ANCHOR_HOME}/benchmarks/performance-tests/herlihy-shavit/queue/*.java
+
+for T in BoundedQueue LockFreeQueue
+do
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes-int/ ${T}PerformanceTest 500000 $N $ROUNDS
+    echo JavaInt, $T, $N, `java -classpath /tmp/classes-int/ ${T}PerformanceTest 500000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+##
+
+javac -d /tmp/classes/ -classpath ${ANCHOR_HOME}/benchmarks/jars/queue-coarse.jar ${ANCHOR_HOME}/benchmarks/performance-tests/anchor/queue/PerformanceTest.java
+
+for T in BoundedQueue LockFreeQueue
+do
+  case $T in
+    CoarseQueue)
+      JAR_FILE=queue-coarse.jar
+      ;;
+    BoundedQueue)
+      JAR_FILE=queue-bounded.jar
+      ;;
+    LockFreeQueue)
+      JAR_FILE=queue-lock-free.jar
+      ;;
+  esac
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes/:${ANCHOR_HOME}/benchmarks/jars/${JAR_FILE} PerformanceTest 500000 $N $ROUNDS
+    echo Anchor, $T, $N, `java -classpath /tmp/classes/:${ANCHOR_HOME}/benchmarks/jars/${JAR_FILE} PerformanceTest 500000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+
+##
+
+mkdir -p /tmp/classes
+javac -d /tmp/classes/ -classpath ${ANCHOR_HOME}/benchmarks/Herlihy-Shavit/ ${ANCHOR_HOME}/benchmarks/performance-tests/herlihy-shavit/hashset/*.java
+
+for T in CoarseHashSet StripedHashSet
+do
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes/ ${T}PerformanceTest 500000 $N $ROUNDS
+    echo Java, $T, $N, `java -classpath /tmp/classes/ ${T}PerformanceTest 500000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+##
+
+mkdir -p /tmp/classes-int
+javac -d /tmp/classes-int/ -classpath ${ANCHOR_HOME}/benchmarks/Herlihy-Shavit/ ${ANCHOR_HOME}/benchmarks/performance-tests/herlihy-shavit/hashset/*.java
+
+for T in CoarseHashSet StripedHashSet
+do
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes-int/ ${T}PerformanceTest 500000 $N $ROUNDS
+    echo JavaInt, $T, $N, `java -classpath /tmp/classes-int/ ${T}PerformanceTest 500000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+##
+
+javac -d /tmp/classes/ -classpath ${ANCHOR_HOME}/benchmarks/jars/hashset-coarse.jar ${ANCHOR_HOME}/benchmarks/performance-tests/anchor/hashset/PerformanceTest.java
+
+for T in CoarseHashSet StripedHashSet
+do
+  case $T in
+    CoarseHashSet)
+      JAR_FILE=hashset-coarse.jar
+      ;;
+    StripedHashSet)
+      JAR_FILE=hashset-striped.jar
+      ;;
+  esac
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes/:${ANCHOR_HOME}/benchmarks/jars/${JAR_FILE} PerformanceTest 500000 $N $ROUNDS
+    echo Anchor, $T, $N, `java -classpath /tmp/classes/:${ANCHOR_HOME}/benchmarks/jars/${JAR_FILE} PerformanceTest 500000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+##
+javac -d /tmp/classes/ -classpath ${ANCHOR_HOME}/benchmarks/jars/list-coarse.jar ${ANCHOR_HOME}/benchmarks/performance-tests/anchor/list/PerformanceTest.java
+
+for T in CoarseList FineList OptimisticList LazyList LockFreeList
+do
+  case $T in
+    CoarseList)
+      JAR_FILE=list-coarse.jar
+      ;;
+    FineList)
+      JAR_FILE=list-fine.jar
+      ;;
+    OptimisticList)
+      JAR_FILE=list-optimistic.jar
+      ;;
+    LazyList)
+      JAR_FILE=list-lazy.jar
+      ;;
+    LockFreeList)
+      JAR_FILE=list-lock-free.jar
+      ;;
+  esac
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes/:${ANCHOR_HOME}/benchmarks/jars/${JAR_FILE} PerformanceTest 10000 $N $ROUNDS
+    echo Anchor, $T, $N, `java -classpath /tmp/classes/:${ANCHOR_HOME}/benchmarks/jars/${JAR_FILE} PerformanceTest 10000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+##
+
+mkdir -p /tmp/classes
+javac -d /tmp/classes/ -classpath ${ANCHOR_HOME}/benchmarks/Herlihy-Shavit/ ${ANCHOR_HOME}/benchmarks/performance-tests/herlihy-shavit/list/*.java
+
+for T in CoarseList FineList OptimisticList LazyList LockFreeList
+do
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes/ ${T}PerformanceTest 10000 $N $ROUNDS
+    echo Java, $T, $N, `java -classpath /tmp/classes/ ${T}PerformanceTest 10000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+##
+
+mkdir -p /tmp/classes-int
+javac -d /tmp/classes-int/ -classpath ${ANCHOR_HOME}/benchmarks/Herlihy-Shavit/ ${ANCHOR_HOME}/benchmarks/performance-tests/herlihy-shavit/list/*.java
+
+for T in CoarseList FineList OptimisticList LazyList LockFreeList
+do
+  for N in 1 2 4 8 12 16
+  do
+    echo "#" java -classpath /tmp/classes-int/ ${T}PerformanceTest 10000 $N $ROUNDS
+    echo JavaInt, $T, $N, `java -classpath /tmp/classes-int/ ${T}PerformanceTest 10000 $N $ROUNDS | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(mean(d),sep="\n")'`
+  done
+done
+
+###

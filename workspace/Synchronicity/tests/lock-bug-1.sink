@@ -1,0 +1,9 @@
+
+class Node {
+
+    public void append(int item) {
+        acquire(this);
+        yield;
+        // assert forall Node n :: (n != this) ==> !holds(n);
+    }
+}

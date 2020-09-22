@@ -1,0 +1,24 @@
+class Node {
+    Node next        moves_as isLocal(this) ? threadlocal : readonly;
+}
+
+class Stack {
+
+  Node head moves_as guarded_by this;
+
+
+  ensures old(this.head) != null;
+  public int pop2() {
+    while(true) {
+      acquire(this);
+      if (this.head != null) {
+        break;
+      }
+      release(this);
+      yield;
+    }
+    this.head = this.head.next;
+    release(this);
+  }
+
+}

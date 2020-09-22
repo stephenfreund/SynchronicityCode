@@ -1,0 +1,23 @@
+class Cow {
+    int c1 threadlocal;
+
+    public void f() {
+        Cow c = new Cow();
+        int t;
+        t := c.c1;
+        t = t + 1;
+        c.c1 := t;
+    }
+
+    // bad: this is shared.
+    public void f2() {
+        int t;
+        t := this.c1;
+        t = t + 1;
+        this.c1 := t;
+    }
+
+}
+
+
+///: (15.9): Reduction failure

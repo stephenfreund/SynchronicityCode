@@ -1,0 +1,12 @@
+
+class Cow {
+
+   Cow(int x) {
+     synchronized(this) {
+       assert this.lock == tid;
+     }
+     this.lock = tid;
+   }
+}
+
+///: (8.16): `;' expected but `=' found

@@ -1,0 +1,528 @@
+#define EPOCH_TID(x) (x % 256)
+#define EPOCH_CLOCK(x) (x / 256)
+#define EPOCH_LEQ(x,y) (x) <= (y)
+#define INC(x) (x + 256)
+
+#define VC_GET(vc, i) ((i < vc.length) ? vc[i] : (i))
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
+#define MIN(x,y) ((x) > (y) ? (y) : (x))
+
+// #define VC_WF(x) (forall int _i :: 0 <= _i && _i < this.vc.length ==> EPOCH_CLOCK(x[_i]) >= 0 && EPOCH_TID(x[_i]) == _i);
+
+#define VC_WF(x) (forall int _i :: 0 <= _i && _i < x.length ==> VC_WF_ENTRY(x[_i], _i))
+//#define VC_WF_ENTRY(x,i) (EPOCH_CLOCK(x) >= 0 && EPOCH_TID(x) == i)
+#define VC_WF_ENTRY(x,i) (x >= i)
+
+/*
+
+ An Anchor implementation of the VerifiedFT-v2 algorithm from
+
+  VerifiedFT: A Verified, High-Performance Precise Dynamic Race Detector
+  James R. Wilcox, Cormac Flanagan, Stephen N. Freund
+  PPOPP, 2018
+
+ We refer the reader to that paper for a full discussion of the
+ synchronization and algorithm.
+
+ Notes:
+
+  * readonly === isRead() ? B : E
+
+  * In the original, inheritance was used to create three specialized
+    versions of VectorClocks for ThreadState, VarState, LockState.  In
+    Anchor, we needed to duplicate the VectorClock code in each of the
+    three classes since there is no inheritance.
+    
+  * Unlike the original, we include initializers for each of the
+    three main classes.
+
+  * We use array abbreviations in Anchor, which were not included in
+    the paper, eg:
+
+    array T = int[moves_as ...]
+
+    This instroduces an array type abbreviation that can be used
+    later, as in
+
+    [T] v = new [T](10);
+
+  * In array specs, the array object is referred to as "athis", and the
+    enclosing object is "this".
+
+  * We encode an ecoch tid@c as (tid + c * 256).  That is, the lower 8
+    bits of an int is the tid and the upper 24 is the clock.  We
+    assume no more than 255 threads will be used and that overflow
+    does not occur.  We use the constant -1 to represent the SHARED
+    special value.  This would be better implemented with bit-wise
+    operations, but Anchor doesn't support them.
+
+*/
+
+class Object { }
+
+class VarState {
+
+  array VC_VarState = int[moves_as
+    isLocal(athis) ? B
+                   : (this.read != -1)
+                        ? guarded_by this
+                        : isRead() ? (holds(this) || tid == index ? B:E)
+                                   : (holds(this) && tid == index ? B:E)]
+
+  array VC_Local = int[moves_as isRead() ? B : E]
+  volatile int read
+    moves_as isLocal(this) ? threadlocal
+                           : (this.read != -1) ? write_guarded_by this
+                                               : (isRead() ? R : E);
+
+  volatile int write
+    moves_as isLocal(this) ? threadlocal : write_guarded_by this;
+    
+  volatile [VC_VarState] vc 
+    moves_as isLocal(this) ? threadlocal 
+                           : (this.read != -1) ? guarded_by this : write_guarded_by this;
+
+  invariant VC_WF(this.vc);
+  invariant this.vc.length <= 256;
+  invariant this.write >= 0;
+  invariant this.read >= -1;
+
+  invariant isShared(this) ==> this.vc != null;
+
+  public VarState() {
+    this.read = 0;
+    this.write = 0;
+    this.vc = new [VC_VarState](0);
+  }
+
+  int get(int i) {
+    [VC_VarState] vc = this.vc;
+    assert i >= 0;
+    int x = (i < vc.length) ? vc[i] : i;
+    return x;
+  }
+
+  void ensureCapacity(int n) {
+    if (n > this.vc.length) {
+      [VC_Local] o = new [VC_Local](this.vc.length);  // spec
+      assume (forall int k :: o[k] == this.vc[k]);    // spec
+
+      [VC_VarState] newVC = new [VC_VarState](n);
+
+      assert n <= 256;
+      for (int i = 0; i < n; i = i + 1)
+        invariant 0 <= i && i <= n;
+        invariant (forall int _i :: 0 <= _i && _i < i && _i < n ==> newVC[_i] == VC_GET(this.vc, _i));   // spec
+        invariant (forall int _i :: this.vc[_i] == o[_i]);   // spec
+        invariant isLocal(newVC) && isFresh(newVC);          // spec
+        invariant (forall int _i :: 0 <= _i && _i < i && _i < n ==> VC_WF_ENTRY(newVC[_i], _i));
+      {
+        newVC[i] = this.get(i);
+        assert VC_WF_ENTRY(newVC[i], i);
+      }
+      this.vc = newVC;
+    }
+  }
+
+  void set(int index, int value) {
+    this.ensureCapacity(index + 1);
+    this.vc[index] = value;
+  }
+
+  int size() {
+    return this.vc.length;
+  }
+
+  bool leq(ThreadState st) {
+    int stSize = st.size();
+    int thisSize = this.size();
+    int n = MAX(stSize, thisSize);
+    int i = 0;
+    assert n <= 256;
+    while (i < n)
+      invariant 0 <= i && i <= n;   // spec
+      invariant (forall int _i :: 0 <= _i && _i < i && _i < n ==> EPOCH_LEQ(VC_GET(this.vc, _i), VC_GET(st.vc, _i)));  // spec
+    {
+      if (!(EPOCH_LEQ(this.get(i), st.get(i)))) {
+        return false;
+      }
+      assert EPOCH_LEQ(VC_GET(this.vc, i), VC_GET(st.vc, i));
+      i = i + 1;
+    }
+    return true;
+  }
+}
+
+class LockState {
+  array VC_LockState = int[moves_as  guarded_by this.target]
+
+  array VC_Local = int[moves_as isRead() ? B : E]
+  
+  Object target moves_as isLocal(this) ? threadlocal : readonly;
+
+  [VC_LockState] vc moves_as isLocal(this) ? threadlocal : guarded_by this.target;
+
+  invariant VC_WF(this.vc);
+  invariant this.vc.length <= 256;
+  invariant isShared(this.target);
+  invariant isShared(this) ==> this.vc != null;
+
+  requires target != null;
+  public LockState(Object target) {
+    this.target = target;
+    this.vc = new [VC_LockState](0);
+  }
+
+  int get(int i) {
+    [VC_LockState] vc = this.vc;
+    return (i < vc.length) ? vc[i] : i;
+  }
+
+  void ensureCapacity(int n) {
+    [VC_LockState] vc = this.vc;
+
+    if (n > vc.length) {
+      [VC_LockState] newVC = new [VC_LockState](n);
+      for (int i = 0; i < n; i = i + 1)
+        invariant (forall int _i :: 0 <= _i && _i < i ==> newVC[_i] == VC_GET(vc, _i));   // spec
+        invariant isLocal(newVC) && isFresh(newVC);    // spec
+      {
+        newVC[i] = this.get(i);
+      }
+      this.vc = newVC;
+    }
+  }
+
+  void set(int index, int value) {
+    this.ensureCapacity(index + 1);
+    this.vc[index] = value;
+  }
+
+  int size() {
+    return this.vc.length;
+  }
+
+  void copy(ThreadState st) {
+    [VC_LockState] oldVCPtr = this.vc;
+    
+    [VC_Local] o = new [VC_Local](st.vc.length);  // spec
+    assume (forall int k :: o[k] == st.vc[k]);   // spec
+
+    this.ensureCapacity(st.size());
+    for (int j = 0; j < this.size(); j = j + 1)
+      invariant 0 <= j && j <= this.vc.length;    // spec
+      invariant (forall int i :: 0 <= i && i < j && i < this.vc.length ==> (this.vc[i] == VC_GET(st.vc, i)));  // spec
+      invariant (forall int i :: st.vc[i] == o[i]);  // spec
+      invariant this.vc == oldVCPtr || isFresh(this.vc);  // spec
+    {
+      int x = st.get(j);
+      this.vc[j] = x;
+    }
+  }
+}
+
+class ThreadState {
+
+  array VC_ThreadState = int[moves_as
+      isLocal(this) ? threadlocal
+                    : this.stopped ? (isRead() ? B : E)
+                                   : (tid == this.t ? B:E)]
+
+  array VC_Local = int[moves_as isRead() ? B : E]
+
+  volatile bool stopped moves_as
+    isLocal(this) ? threadlocal :
+      isRead() ? (tid == this.t ? B : (this.stopped ? R : N))
+               : (tid == this.t && !this.stopped && newValue ? N : E);
+
+  Tid t     moves_as  isLocal(this) ? threadlocal : readonly;
+
+  invariant 0 <= this.t && this.t < 256;
+
+  volatile [VC_ThreadState] vc  moves_as
+      isLocal(this) ? threadlocal
+                    : this.stopped ? isRead() ? B : E
+                                   : (tid == this.t ? B:E);
+
+  invariant this.vc.length <= 256;
+  invariant VC_WF(this.vc);
+
+  invariant isShared(this.vc) && this.vc != null;
+  invariant this.vc.length > this.t;
+
+
+  int get(int i) {
+    [VC_ThreadState{this}] vc = this.vc;
+    return (i < vc.length) ? vc[i] : i;
+  }
+
+  void set(int index, int value) {
+    this.ensureCapacity(index + 1);
+    this.vc[index] = value;
+  }
+
+  void ensureCapacity(int n) {
+        [VC_ThreadState] vc = this.vc;
+
+    if (n > vc.length) {
+      [VC_ThreadState] newVC = new [VC_ThreadState](n);
+      [VC_Local] o = new [VC_Local](vc.length);  // spec
+      assume (forall int k :: o[k] == vc[k]); // spec
+
+      for (int i = 0; i < n; i = i + 1)
+        invariant (forall int _i :: 0 <= _i && _i < i && _i < n ==> newVC[_i] == VC_GET(vc, _i));  // spec
+        invariant (forall int _i :: 0 <= _i && _i < vc.length ==> vc[_i] == o[_i]);   // spec
+        invariant isFresh(newVC) && isLocal(newVC);  // spec
+	    invariant (forall int k :: o[k] == vc[k]); // spec
+        invariant (forall int _i :: 0 <= _i && _i < i && _i < n ==> VC_WF_ENTRY(newVC[_i], _i));
+      {
+        newVC[i] = this.get(i);
+        assert VC_WF_ENTRY(newVC[i], i);
+        assert newVC[i] == VC_GET(vc, i);
+      }
+      this.vc = newVC;
+    }
+  }
+
+  int size() {
+    return this.vc.length;
+  }
+
+  void joinThread(ThreadState st) {
+    for (int i = 0; i < st.size(); i = i + 1) {
+      this.set(i, MAX(this.get(i), st.get(i)));
+    }
+  }
+
+  void inc(int t) {
+    this.set(t, INC(this.get(t)));
+  }
+
+
+  requires tid == this.t;  
+  requires !this.stopped;
+  {   
+	modifies $result;   // spec
+	ensures (old(sx.write == VC_GET(this.vc, tid) && old(sx.vc) == sx.vc)) ==> $result;   // spec
+  } yield; {
+    modifies sx;   // spec
+
+    ensures old(sx.read) == sx.read;  // spec
+    ensures old(sx.vc) == sx.vc;      // spec
+
+    ensures (old(sx.write <= VC_GET(this.vc, EPOCH_TID(sx.write))    // spec
+               && (sx.read != -1 ==> sx.read <= VC_GET(this.vc, EPOCH_TID(sx.read)))  // spec
+               && (sx.read == -1 ==> (forall int _i :: 0 <= _i && _i < MAX(this.vc.length, sx.vc.length) ==> VC_GET(sx.vc, _i) <= VC_GET(this.vc, _i))))) == $result;  // spec
+
+//    ensures (old(sx.write <= VC_GET(this.vc, EPOCH_TID(sx.write)))) == $result;    // spec
+
+    ensures $result  ==> sx.write == old(VC_GET(this.vc, tid));     // spec
+    ensures !$result ==> sx.write == old(sx.write);                 // spec
+
+  }
+  public bool write(VarState sx) {
+    int e = this.get(this.t);
+    int w = sx.write;
+    if (w == e) { return true; }
+    yield;
+    assume !nextSpecStep(0);  // spec
+    synchronized(sx) {
+      w = sx.write;
+      int ww = this.get(EPOCH_TID(w));
+      if (w > ww) {
+//        assert !(sx.write <= VC_GET(this.vc, EPOCH_TID(sx.write)));
+        return false;
+      }
+      int r = sx.read;
+      if (r != -1) {
+        int rr = this.get(EPOCH_TID(r));
+        if (r > rr) {
+//          assert !(sx.read != -1 ==> sx.read <= VC_GET(this.vc, EPOCH_TID(sx.read)));
+          return false;
+        }
+      } else {
+        if (!sx.leq(this)) {
+           return false;
+        }
+      }
+//      assert sx.write <= VC_GET(this.vc, EPOCH_TID(sx.write));
+//      assert sx.read != -1 ==> sx.read <= VC_GET(this.vc, EPOCH_TID(sx.read));
+      sx.write = e;
+      return true;
+    }
+  }
+
+  requires tid == this.t;
+  requires !this. stopped;
+  {
+    modifies $result;   // spec
+    ensures (old(sx.read == VC_GET(this.vc, tid) || sx.read == -1 && (VC_GET(this.vc, tid)) == VC_GET(sx.vc, tid))) ==> $result;    // spec
+  } yield; {
+    modifies sx, sx.vc;   // spec
+
+    ensures old(sx.write) == sx.write;  // spec
+
+    ensures (old(sx.write <= VC_GET(this.vc, EPOCH_TID(sx.write)))) == $result;  // spec
+
+    ensures !$result ==> (old(sx.read) == sx.read);   // spec
+    ensures !$result ==> (forall int i :: old(sx.vc) == sx.vc);   // spec
+    ensures !$result ==> (forall int i :: old(sx.vc[i]) == sx.vc[i]);   // spec
+    ensures $result ==>  (sx.read == old(VC_GET(this.vc, tid))    // spec
+                     || (old(sx.read) != -1 && sx.read == -1 && (forall int _i :: 0 <= _i && _i < sx.vc.length ==> sx.vc[_i] == old(_i == tid ? this.vc[tid]  // spec
+  		       		     	      	      	       	       	      	                                                             : (_i == EPOCH_TID(sx.read) ? sx.read // spec
+                                                                       									     : (VC_GET(sx.vc,_i))))))  // spec
+  		    || (old(sx.read) == -1 && sx.read == -1 && (forall int _i :: 0 <= _i && _i < sx.vc.length ==> sx.vc[_i] == old(_i == tid ? this.vc[tid]  // spec
+  		       		     	      	      	       	     	                                                               : VC_GET(sx.vc,_i)))));   // spec
+  }
+  public bool read(VarState sx) {
+    int t = this.t;
+    int e = this.get(t);
+
+    int r;
+    r = sx.read;
+    if (r == e || r == -1 && sx.get(t) == e) { return true; }
+    yield;
+    assume !nextSpecStep(0);   // spec
+    synchronized(sx) {
+      int w = sx.write;
+      int ww = this.get(EPOCH_TID(w));
+      if (w > ww) { return false; }
+      r = sx.read;
+      if (r != -1) {
+        int rr = this.get(EPOCH_TID(r));
+        if (r <= rr) {
+          sx.read = e;
+        } else {
+          sx.set(EPOCH_TID(r), r);
+          sx.set(t, e);
+          sx.read = -1;
+          return true;
+        }
+      } else {
+        sx.set(t, e);
+      }
+    }
+    return true;
+  }
+
+
+  requires tid == this.t;
+  requires !this.stopped;
+  requires holds(sm.target);
+  modifies this, this.vc;   // spec
+  ensures this.stopped == old(this.stopped);   // spec
+  ensures this.vc.length >= sm.vc.length;   // spec
+  ensures (forall int i :: 0 <= i && i < sm.vc.length ==> this.vc[i] == old(MAX(VC_GET(sm.vc, i), VC_GET(this.vc, i))));   // spec
+  ensures (forall int i :: sm.vc.length <= i && i < this.vc.length ==> this.vc[i] == old(this.vc[i]));    // spec
+  public void acq(LockState sm) {
+    [VC_ThreadState] oldThisVc = this.vc;
+    [VC_Local] oldVc = new [VC_Local](this.vc.length);  // spec
+    assume (forall int k :: oldVc[k] == this.vc[k]);  // spec
+    for (int j = 0; j < sm.size(); j = j + 1) 
+      invariant j <= sm.vc.length;   // spec
+      invariant this.vc.length >= j;  // spec
+      invariant (forall int i :: 0 <= i && i < j ==> this.vc[i] == MAX(VC_GET(sm.vc, i), VC_GET(oldVc, i)));  // spec
+      invariant (forall int i :: j <= i && i < this.vc.length ==> this.vc[i] == oldVc[i]);  // spec
+      invariant this.vc == oldThisVc || (isFresh(this.vc));  // spec
+    {
+      assert oldVc[j] == this.vc[j]; 
+      this.set(j, MAX(this.get(j), sm.get(j)));
+    }
+  }
+
+
+  requires tid ==this.t;
+  requires !this.stopped;
+  requires holds(sm.target);
+  modifies sm, sm.vc;
+  ensures (forall int i :: 0 <= i && i < sm.vc.length ==> sm.vc[i] == VC_GET(this.vc, i));  // spec
+  public void rel(LockState sm) {
+    sm.copy(this);
+  }
+
+
+
+  requires (t == 0);  // only checked for client-side call, not nested call in fork...
+  ensures !this.stopped;   // spec
+  ensures this.t == t;    // spec
+  ensures this.vc.length == 1;    // spec
+  ensures this.vc[0] == 256;     // spec
+  public ThreadState(int t, ThreadState forker) {
+    this.t = t;
+    this.stopped = false;
+
+    if (t != 0) {
+
+      [VC_Local]oldVc = new[VC_Local] (forker.vc.length);  // spec
+      assume (forall int k :: oldVc[k] == forker.vc[k]);  // spec
+      
+      int n = MAX(t + 1, forker.size());
+      [VC_ThreadState] vc = new[VC_ThreadState] (n);
+      for (int i = 0; i < n; i = i + 1) 
+        invariant 0 <= i && i <= n;   // spec
+        invariant(forall int _i :: 0 <= _i && _i < i && _i < n ==> vc[_i] == (_i == t ? INC(VC_GET(forker.vc, _i)) : VC_GET(forker.vc, _i)));   // spec
+        invariant isLocal(vc) && isFresh(vc);    // spec
+        invariant(forall int _i :: forker.vc[_i] == oldVc[_i]);  // spec
+        invariant n <= vc.length;   // spec
+        invariant(forall int _i :: 0 <= _i && _i < i && _i < n ==>VC_WF_ENTRY(vc[_i], _i));  // for performance...   // spec
+      {
+        vc[i] = i == t ? INC(forker.get(i)) : forker.get(i);
+        assert VC_WF_ENTRY(vc[i], i);
+      }
+      this.vc = vc;
+    } else {
+      [VC_ThreadState] vc = new[VC_ThreadState](1);
+      vc[0] = 256;
+      this.vc = vc;
+    }
+  }
+
+
+  requires tid == this.t;
+  requires !this.stopped;
+  requires this.t != uTid;
+  requires uTid > 0 && uTid < 256;
+  modifies this.vc;   // spec
+  ensures (forall int i :: 0 <= i && i < this.vc.length ==> this.vc[i] == old(i != tid ? this.vc[i] : INC(this.vc[tid])));   // spec
+  ensures !$result.stopped;   // spec
+  ensures $result.t == uTid;   // spec
+  ensures (forall int i :: 0 <= i && i < $result.vc.length ==> $result.vc[i] == old(i != uTid ? VC_GET(this.vc,i) : INC(VC_GET(this.vc,i))));   // spec
+  public ThreadState fork(int uTid) {
+    // We create the new ThreadState object here so that we
+    // have threadlocal access to it.
+    ThreadState u = new ThreadState(uTid, this);
+    this.inc(this.t);
+    return u;
+  }
+
+
+  requires tid == this.t;
+  requires tid != u.t;
+  requires !this.stopped;
+  requires u.stopped;
+  modifies this;
+
+  ensures this.vc[tid] == old(INC(MAX(VC_GET(u.vc, tid), VC_GET(this.vc, tid))));  // spec
+  ensures (forall int _i :: 0 <= _i < this.vc.length && _i != tid ==> this.vc[_i] == MAX(VC_GET(u.vc, _i), old(VC_GET(this.vc, _i))));  // spec
+
+
+  public void join(ThreadState u) {
+    [VC_ThreadState] oldVCPtr = this.vc;
+    int n = MAX(u.size(), this.size());
+    [VC_Local] orig = new [VC_Local](this.vc.length);  // spec
+    assume (forall int k :: orig[k] == this.vc[k]); // spec
+
+    for (int i = 0; i < n; i = i + 1)
+      invariant i <= this.vc.length <= n;
+      invariant (forall int _i :: i <= _i < n ==> VC_GET(this.vc, _i) == VC_GET(orig, _i));
+      invariant (forall int _i :: 0 <= _i && _i < i ==> this.vc[_i] == MAX(VC_GET(u.vc, _i), VC_GET(orig, _i)));
+      invariant this.vc == oldVCPtr || (isFresh(this.vc));     // spec
+    {
+      int x = MAX(u.get(i), this.get(i));
+      assert x == MAX(VC_GET(u.vc, i), VC_GET(orig, i));
+      this.set(i, x);
+      assert this.vc[i] == MAX(VC_GET(u.vc, i), VC_GET(orig, i));
+    }
+    this.inc(this.t);
+  }
+}

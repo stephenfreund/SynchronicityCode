@@ -1,0 +1,59 @@
+class Node {
+    int item         moves_as isLocal(this) ? threadlocal : readonly;
+    Node next        moves_as isLocal(this) ? threadlocal : readonly;
+
+    ghost Seq<int> spec moves_as E;
+
+    invariant this.next == null ==> this.spec == SeqUnit(this.item);
+    invariant this.next != null ==> this.spec == SeqConcat(SeqUnit(this.item), this.next.spec);
+
+    Node(int item, Node next) {
+      this.item = item;
+      this.next = next;
+      this.spec = this.next == null ? SeqUnit(this.item) : SeqConcat(SeqUnit(this.item), this.next.spec);
+    }
+}
+
+class Stack {
+
+  Node head moves_as isLocal(this) ? threadlocal : guarded_by this;
+
+  ghost Seq<int> spec moves_as E;
+
+  invariant this.head == null ==> this.spec == SeqEmpty<int>();
+  invariant this.head != null ==> this.spec == this.head.spec;
+
+  modifies this;
+  ensures this.spec == SeqEmpty<int>();
+  public Stack() {
+    this.head = null;
+  }
+
+  modifies this;
+  ensures this.spec == SeqConcat<int>(SeqUnit(item), old(this.spec));
+  public void push(int item) {
+    acquire(this);
+    Node node = new Node(item, this.head);
+    this.head = node;
+    this.spec = SeqConcat<int>(SeqUnit(item), this.spec);
+    release(this);
+  }
+
+  modifies this;
+  ensures old(this.spec) == SeqConcat<int>(SeqUnit($result), this.spec);
+  public int pop() {
+    while (true) {
+      acquire(this);
+      if (this.head != null){
+        break;
+      }
+      release(this);
+      yield;
+    }
+    int value = this.head.item;
+    this.head = this.head.next;
+    this.spec = SeqExtract(this.spec, 1, SeqLen(this.spec)-1);
+    release(this);
+    return value;
+  }
+}

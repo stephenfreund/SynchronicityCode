@@ -1,0 +1,8 @@
+///: args -sameValueCommutes
+class Cow {
+
+    bool flag   this.flag ? (isRead ? R : (newValue ? R : E))
+                          : (isRead ? N : (newValue ? N : E));
+
+}
+

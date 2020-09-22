@@ -1,0 +1,28 @@
+
+
+class Mutex {
+
+	int m   N;
+
+    void acq() {
+        yield;
+        while (true) {
+            yield;
+        }
+    }
+
+}
+
+
+class Test {
+
+    Mutex m  readonly;
+
+    public void f() {
+        Mutex m := this.m;
+        invariant m == this.m;
+        m.acq();
+        Mutex this_m := this.m;
+        assert this_m == m;
+    }
+}

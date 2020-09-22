@@ -1,0 +1,43 @@
+
+class Pair {
+    int key;
+    int value;
+    public Pair(int key, int value) {
+        this.key = key; this.value = value;
+    }
+}
+
+class Queue {
+
+  [Pair] elems;
+
+    volatile int tail;
+    volatile int head;
+
+    public Vector() {
+      // spec, head, tail all zero/empty initialized
+      this.elems = new [T](512);
+    }
+
+    public bool enqueue(Pair x) {
+        if ((this.tail + 1) % SIZE != this.head) {
+            yield;
+            this.elems[this.tail] = x;
+            this.tail = (this.tail + 1) % SIZE;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public Pair dequeue() {
+        if (this.head != this.tail) {
+            yield;
+            Pair result = this.elems[this.head];
+            this.head = (this.head + 1) % SIZE;
+            return result;
+        } else {
+            return null;
+        }
+    }
+}

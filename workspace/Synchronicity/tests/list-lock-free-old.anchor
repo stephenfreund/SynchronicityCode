@@ -1,0 +1,273 @@
+///: ignore
+
+class AtomicMarkableReferenceResult {
+  Node ref     moves_as isLocal(this) ? threadlocal : readonly;
+  bool mark    moves_as isLocal(this) ? threadlocal : readonly;
+
+//  init(Node ref, bool mark) {
+//    this.ref = ref;
+//    this.mark = mark;
+//  }
+}
+
+
+
+class Node {
+  int item  moves_as isLocal(this) ? threadlocal : readonly;
+  volatile Node ref    moves_as isLocal(this) ? threadlocal: (this.nextWriter == tid ? R#N : N#E);
+  volatile bool mark   moves_as isLocal(this) ? threadlocal: (this.nextWriter == tid ? R#N : N#E);
+
+  volatile Tid nextWriter moves_as isLocal(this) ?
+                 (B # (newValue == tid || newValue == Tid.null ? B : E))
+               : (this.nextWriter == tid ?
+                     (isRead ? B : (newValue == tid ? B : (newValue == Tid.null ? L : E)))
+                   : (isRead ? E : (this.nextWriter == Tid.null && newValue == tid ? R : E))) !
+              yields_as (this.nextWriter != tid) == (newValue != tid);
+
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.ref != null ==> this.item < this.ref.item;
+    invariant (this.ref == null) == (this.item == INT_MAX);
+
+    invariant this.mark ==> (INT_MIN < this.item && this.item < INT_MAX);
+
+    Node(int item) {
+      this.item = item;
+      this.ref = null;
+      this.mark = false;
+    }
+
+      bool cas2(Node expectedRef, Node newRef, bool expectedMark, bool newMark) {
+          bool tmp = *;
+          if (tmp) {
+           assume this.nextWriter == tid;
+           Node ref;
+           bool mark;
+           nocheck ref = this.ref;
+           nocheck mark = this.mark;
+           if (ref == expectedRef && mark == expectedMark) {
+            this.ref = newRef;
+            nocheck this.mark = newMark;
+            return true;
+           } else {
+            return false;
+           }
+          } else {
+           return false;
+          }
+         }
+
+      bool attemptMark(Node expectedRef, bool newMark) {
+          bool tmp = *;
+          if (tmp) {
+           assume this.nextWriter == tid;
+           Node ref;
+           bool mark;
+           nocheck ref = this.ref;
+           nocheck mark = this.mark;
+           if (ref == expectedRef) {
+            this.mark = newMark;
+            return true;
+           } else {
+            return false;
+           }
+          } else {
+           return false;
+          }
+         }
+
+
+      AtomicMarkableReferenceResult get() {
+        AtomicMarkableReferenceResult result = new AtomicMarkableReferenceResult();
+        bool tmp = *;
+        if (tmp) {
+          assume this.nextWriter == Tid.null;
+          this.nextWriter = tid;
+        }
+        result.ref = this.ref;
+        nocheck result.mark = this.mark;
+        return result;
+
+      }
+
+}
+
+class Window {
+  Node pred moves_as threadlocal;
+  Node curr moves_as threadlocal;
+  Window(Node pred, Node curr) {
+    this.pred = pred;
+    this.curr = curr;
+  }
+}
+
+class List {
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+
+    // must have at least two nodes...
+    invariant this.head.ref != null;
+
+    List() {
+      Node tail = new Node(INT_MAX);
+      Node head = new Node(INT_MIN);
+      head.ref = tail;
+      head.mark = false;
+      this.head = head;
+    }
+
+    Window findHelper(int item) {
+      Node pred = this.head;
+      AtomicMarkableReferenceResult currResult = pred.get();
+      Node curr = currResult.ref;
+
+      yield;
+
+      while (true)
+        invariant isShared(curr);
+        invariant isShared(pred);
+        invariant pred.item < item;
+        invariant curr.item <= INT_MAX;
+      {
+
+        AtomicMarkableReferenceResult succResult = curr.get();
+        Node succ = succResult.ref;
+        bool marked = succResult.mark;
+
+        yield;
+
+
+        while (marked)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant marked ==> isShared(succ);
+          invariant marked ==> curr.item < INT_MAX;
+          invariant marked ==> curr.item < succ.item;
+          invariant !marked ==> (isShared(succ) && curr.item < succ.item) || (succ == null && curr.item == INT_MAX);
+          invariant pred.item < item;
+        {
+          yield;
+
+          bool snip = pred.cas2(curr, succ, false, false);
+          if (!snip) {
+            return null;
+          }
+
+          yield;
+
+          curr = succ;
+          succResult = curr.get();
+          succ = succResult.ref;
+          marked = succResult.mark;
+
+          yield;
+
+        }
+
+        if (curr.item >= item) {
+          Window w = new Window(pred, curr);
+          return w;
+        } else {
+          pred = curr;
+          curr = succ;
+        }
+
+        yield;
+
+      }
+    }
+
+
+    //requires INT_MIN < item && item < INT_MAX;
+    Window find(int item) {
+      yield;
+      while (true) {
+        Window w = this.findHelper(item);
+        if (w != null) {
+          assert w.pred.item < item && item <= w.curr.item;
+          return w;
+        }
+        yield;
+      }
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool add(int item) {
+      while (true) {
+        Window window = this.find(item);
+        Node pred = window.pred;
+        Node curr = window.curr;
+        if (curr.item == item) {
+          assume (forall Node _i :: _i.nextWriter != tid);
+          return false;
+        } else {
+          Node node = new Node(item);
+          node.ref = curr;
+          node.mark = false;
+          if (pred.cas2(curr, node, false, false)) {
+            assume (forall Node _i :: _i.nextWriter != tid);
+            return true;
+          }
+        }
+      }
+    }
+
+
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool remove(int item) {
+      while (true) {
+        Window window = this.find(item);
+        Node pred = window.pred;
+        Node curr = window.curr;
+        if (curr.item != item) {
+          assume (forall Node _i :: _i.nextWriter != tid);
+          return false;
+        } else {
+          AtomicMarkableReferenceResult succResult = curr.get();
+          Node succ = succResult.ref;
+
+          yield;
+          bool snip = curr.cas2(succ, succ, false, true);
+          if (snip) {
+            yield;
+            if (pred.cas2(curr, succ, false, false)) {
+              assume (forall Node _i :: _i.nextWriter != tid);
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+
+
+     requires INT_MIN < item && item < INT_MAX;
+     public bool contains(int item) {
+       while (true) {
+         Node curr = this.head;
+         yield;
+         while (curr.item < item)
+           invariant isShared(curr);
+         {
+           curr = curr.ref;
+           yield;
+         }
+         return curr.item == item && !curr.mark;
+
+       }
+     }
+
+}
+
+class Main {
+  public void main() {
+    List list = new List();
+  }
+}

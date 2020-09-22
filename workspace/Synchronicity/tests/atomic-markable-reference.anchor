@@ -1,0 +1,99 @@
+
+class Data {
+
+}
+
+class AtomicMarkableReferenceResult {
+  Data ref     moves_as isLocal(this) ? threadlocal : readonly;
+  bool mark    moves_as isLocal(this) ? threadlocal : readonly;
+}
+
+
+
+class AtomicMarkableReference {
+  volatile Data ref    moves_as this.nextWriter == tid ? R#N : N#E;
+  volatile bool mark   moves_as this.nextWriter == tid ? R#N : N#E;
+
+  volatile Tid nextWriter moves_as isLocal(this) ?
+                 (B # (newValue == tid || newValue == Tid.null ? B : E))
+               : (this.nextWriter == tid ?
+                     (isRead ? B : (newValue == tid ? B : (newValue == Tid.null ? L : E)))
+                   : (isRead ? E : (this.nextWriter == Tid.null && newValue == tid ? R : E))) !
+              yields_as (this.nextWriter != tid) == (newValue != tid);
+
+  bool cas2(Data expectedRef, Data newRef, bool expectedMark, bool newMark) {
+      bool tmp = *;
+      if (tmp) {
+       assume this.nextWriter == tid;
+       Data ref;
+       bool mark;
+       nocheck ref = this.ref;
+       nocheck mark = this.mark;
+       if (ref == expectedRef && mark == expectedMark) {
+        this.ref = newRef;
+        nocheck this.mark = newMark;
+        return true;
+       } else {
+        return false;
+       }
+      } else {
+       return false;
+      }
+     }
+
+  bool attemptMark(Data expectedRef, bool newMark) {
+      bool tmp = *;
+      if (tmp) {
+       assume this.nextWriter == tid;
+       Data ref;
+       bool mark;
+       nocheck ref = this.ref;
+       nocheck mark = this.mark;
+       if (ref == expectedRef) {
+        this.mark = newMark;
+        return true;
+       } else {
+        return false;
+       }
+      } else {
+       return false;
+      }
+     }
+
+
+  AtomicMarkableReferenceResult get() {
+    bool tmp = *;
+    if (tmp) {
+      assume this.nextWriter == Tid.null;
+      this.nextWriter = tid;
+    }
+    AtomicMarkableReferenceResult result = new AtomicMarkableReferenceResult();
+    result.ref = this.ref;
+    nocheck result.mark = this.mark;
+    return result;
+
+  }
+}
+
+
+
+class Main {
+
+    public void f() {
+      AtomicMarkableReference x = new AtomicMarkableReference();
+      Data d = new Data();
+      AtomicMarkableReferenceResult result = x.get();
+      yield;
+      AtomicMarkableReferenceResult result2 = x.get();
+      bool b = x.cas2(result.ref, null, result.mark, true);
+      if (b) {
+        assert result.ref == result2.ref;
+        assert result.mark == result2.mark;
+      } else {
+        assert result.ref == result2.ref;  // should fail
+      }
+      assume (forall AtomicMarkableReference _i :: _i.nextWriter != tid);
+    }
+}
+
+///: (93.9): This assertion may not hold.

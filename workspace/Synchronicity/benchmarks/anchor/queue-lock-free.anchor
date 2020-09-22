@@ -1,0 +1,89 @@
+
+class Node {
+    int value  moves_as isLocal(this) ? threadlocal : readonly;
+
+//    volatile Node next  moves_as isLocal(this) ? threadlocal :
+//      isRead ? (this.next != null ? R : N)
+//             : (this.next == null && newValue != null ? N : E);
+
+    noABA volatile Node next  moves_as isLocal(this) ? isRead() ? B
+                                                                : (isLocal(newValue) || newValue == null ? B : E)
+                                                     : isRead() ? (this.next != null ? R : N)
+                                                                : (isLocal(newValue) && this.next == null && newValue != null ? N : E) !
+                     yields_as newValue == this.next
+                           || (!isLocal(newValue) && !isShared(newValue) && (newValue != null));
+
+    // problem: will only do update when CAS with this.next_nextValue == newValue...
+    //  why didn't we see this in stack/list CAS examples? -> because we have a cosntraint on old value here...
+
+    Node(int value, Node next) {
+      this.value = value;
+      this.next = next;
+    }
+}
+
+class Queue {
+
+    volatile Node head moves_as isLocal(this) ? threadlocal : N;
+    volatile Node tail moves_as isLocal(this) ? threadlocal : N;
+
+    invariant this.head != null;
+    invariant this.tail != null;
+
+
+    public Queue() {
+        Node sentinel = new Node(0, null);
+        this.head = sentinel;
+        this.tail = sentinel;
+    }
+
+    public void enqueue(int value) {
+        Node n = new Node(value, null);
+        while(true)
+            invariant isLocal(n);
+            invariant n.next == null;
+        {
+            Node last = this.tail;
+            yield;
+            Node next = last.next;
+            if (next == null) {
+                if (cas(last, next, next, n)) {
+                    yield;
+                    cas(this, tail, last, n);
+                    return;
+                }
+            } else {
+                 cas(this, tail, last, next);
+            }
+            yield;
+        }
+    }
+
+    public int dequeue() {
+        while(true)
+        {
+            Node first = this.head;
+            yield;
+            Node next = first.next;
+            yield;
+            Node last = this.tail;
+            if (first == last) {
+                if (next == null) {
+                 return -1;
+                } else {
+                 yield;
+                 cas(this, tail, last, next);
+                }
+            } else {
+                if (next != null) {
+                    int value = next.value;
+                    yield;
+                    if (cas(this, head, first, next)) {
+                        return value;
+                    }
+                }
+            }
+            yield;
+        }
+    }
+}

@@ -1,0 +1,116 @@
+// one big lock.
+
+
+class Node {
+    int item moves_as isLocal(this) ? threadlocal : readonly;
+    Node next moves_as isLocal(this) ? threadlocal : this.item < INT_MAX ? guarded_by this.owner : readonly;
+    List owner moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null ==> this.owner == this.next.owner;
+    invariant this.owner != null;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == INT_MAX;
+
+    Node(int item, List owner) {
+      this.item = item;
+      this.owner = owner;
+    }
+}
+
+class List {
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+    invariant this.head.owner == this;
+
+    public List() {
+      Node tail = new Node(INT_MAX, null);
+      Node head = new Node(INT_MIN, null);
+      tail.owner = this, this.head = head, head.owner = this, head.next = tail;
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool add(int item) {
+        Node pred;
+        Node curr;
+        int key = item;
+        synchronized(this) {
+            pred = this.head;
+            curr = pred.next;
+
+            while (curr.item < item)
+              invariant isShared(curr);
+              invariant isShared(pred);
+              invariant pred.item < item;
+              invariant curr == pred.next;
+              invariant pred.owner == this;
+              invariant curr.owner == this;
+            {
+                pred = curr;
+                curr = curr.next;
+            }
+            if(item == curr.item) {
+                return false;
+            } else {
+                Node node = new Node(item, this);
+                node.next = curr;
+                pred.next = node;
+                return true;
+            }
+        }
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool remove(int item) {
+        Node pred;
+        Node curr;
+        synchronized(this) {
+            pred = this.head;
+            curr = pred.next;
+
+            while (curr.item < item)
+              invariant isShared(curr);
+              invariant isShared(pred);
+              invariant pred.item < item;
+              invariant curr == pred.next;
+              invariant pred.owner == this;
+              invariant curr.owner == this;
+            {
+                pred = curr;
+                curr = curr.next;
+            }
+            if(item == curr.item) {
+              pred.next = curr.next;
+              return true;
+            } else {
+              return false;
+            }
+        }
+    }
+
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool contains(int item) {
+     synchronized(this) {
+       Node pred = this.head;
+       Node curr = pred.next;
+       while (curr.item < item)
+              invariant isShared(curr);
+              invariant curr.owner == this;
+              invariant pred.owner == this;
+              invariant curr == pred.next;
+       {
+         pred = curr;
+         curr = curr.next;
+       }
+       return (item == curr.item);
+     }
+   }
+}

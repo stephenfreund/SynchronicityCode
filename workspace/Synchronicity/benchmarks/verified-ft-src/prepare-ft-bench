@@ -1,0 +1,3 @@
+cpp -C -E -W -P fasttrack-with-macros.anchor > ../anchor/fasttrack.anchor
+cpp -C -E -W -P fasttrack-specs-with-macros.anchor > ../specs/fasttrack.anchor
+# cpp -C -E -W -P fasttrack-seq.anchor > ../../../../../Synchronicity/workspace/Synchronicity/fasttrack-seq.anchor

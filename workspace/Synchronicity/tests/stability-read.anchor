@@ -1,0 +1,25 @@
+ class VarState {
+
+     volatile int read  moves_as (this.read != -1)
+                                    ? write_guarded_by this
+                                    : isRead() ? R : E;
+
+
+ }
+
+/*
+
+(3.6): VarState.read failed Stable Read-Write Check
+
+     volatile int read  moves_as (this.read != -1)
+     ^
+
+    Thread t    : _ := x.read;   [(x.read != -1) && !holds(x, t) && (isRead)  ==>  N]
+    Thread u    : y.read := -1;   [(y.read != -1) && (holds(y, u)) && !isRead  ==>  N]
+
+    BUT...
+
+    Thread u    : y.read := -1;   [(y.read != -1) && (holds(y, u)) && !isRead  ==>  N]
+    Thread t    : _ := x.read;   [x.read == -1 && (isRead)  ==>  R]
+
+*/

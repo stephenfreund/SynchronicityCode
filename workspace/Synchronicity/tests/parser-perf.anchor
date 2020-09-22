@@ -1,0 +1,41 @@
+
+class ThreadState {
+
+    array VC_ThreadState = int[moves_as B]
+
+    volatile bool stopped moves_as N;
+
+    Tid t     moves_as  B;
+
+    volatile [VC_ThreadState] vc  moves_as B;
+
+    ensures (forall int _i :: 0 <= _i && _i < this.vc.length
+            ==> this.vc[_i] == old(_i == tid ? ((((( _i < u.vc.length) ? u.vc[ _i] : ( _i))) > ( (( _i < this.vc.length) ? this.vc[ _i] : ( _i))) ? ((( _i < u.vc.length) ? u.vc[ _i] : ( _i))) : ( (( _i < this.vc.length) ? this.vc[ _i] : ( _i)))) + 256) : (((( _i < u.vc.length) ? u.vc[ _i] : ( _i))) > ( (( _i < this.vc.length) ? this.vc[ _i] : ( _i))) ? ((( _i < u.vc.length) ? u.vc[ _i] : ( _i))) : ( (( _i < this.vc.length) ? this.vc[ _i] : ( _i))))));  
+    public void join(ThreadState u) {
+
+    }
+
+
+}
+
+///:      (10.44): yields_as clause for ThreadState.vc is not valid
+///:              (10.5): ThreadState.vc failed Read-Write Left-Mover Check
+///:              (10.5): ThreadState.vc failed Read-Write Right-Mover Check
+///:              (10.5): ThreadState.vc failed Write-Read Left-Mover Check
+///:              (10.5): ThreadState.vc failed Write-Read Right-Mover Check
+///:              (10.5): ThreadState.vc failed Write-Write Left-Mover Check
+///:              (10.5): ThreadState.vc failed Write-Write Right-Mover Check
+///:              (4.41): yields_as clause for Array.ThreadState.VC_ThreadState is not valid
+///:              (4.5): Array Array.ThreadState.VC_ThreadState failed Read-Write Left-Mover Check
+///:              (4.5): Array Array.ThreadState.VC_ThreadState failed Read-Write Right-Mover Check
+///:              (4.5): Array Array.ThreadState.VC_ThreadState failed Write-Read Left-Mover Check
+///:              (4.5): Array Array.ThreadState.VC_ThreadState failed Write-Read Right-Mover Check
+///:              (4.5): Array Array.ThreadState.VC_ThreadState failed Write-Write Left-Mover Check
+///:              (4.5): Array Array.ThreadState.VC_ThreadState failed Write-Write Right-Mover Check
+///:              (8.25): yields_as clause for ThreadState.t is not valid
+///:              (8.5): ThreadState.t failed Read-Write Left-Mover Check
+///:              (8.5): ThreadState.t failed Read-Write Right-Mover Check
+///:              (8.5): ThreadState.t failed Write-Read Left-Mover Check
+///:              (8.5): ThreadState.t failed Write-Read Right-Mover Check
+///:              (8.5): ThreadState.t failed Write-Write Left-Mover Check
+///:              (8.5): ThreadState.t failed Write-Write Right-Mover Check

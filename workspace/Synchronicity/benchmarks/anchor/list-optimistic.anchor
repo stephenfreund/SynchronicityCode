@@ -1,0 +1,170 @@
+class Node {
+    int item  moves_as isLocal(this) ? threadlocal : readonly;
+    volatile Node next moves_as isLocal(this) ? threadlocal : write_guarded_by this;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == INT_MAX;
+
+    Node(int item) {
+      this.item = item;
+    }
+}
+
+class List {
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+
+    public List() {
+      Node tail = new Node(INT_MAX);
+      Node head = new Node(INT_MIN);
+      head.next = tail;
+      this.head = head;
+    }
+
+    // Check if pred is still
+    // reachable from head, and that pred.next is still curr.
+    // Must hold pred/curr on entry.
+    bool validate(Node pred, Node curr) {
+        Node node = this.head;
+        yield;
+        while (node.item <= pred.item)
+             invariant holds(pred);
+             invariant holds(curr);
+             invariant isShared(pred);
+             invariant isShared(curr);
+        {
+          if (node == pred)
+          {
+            return pred.next == curr;
+          }
+          node = node.next;
+          yield;
+        }
+        return false;
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool add(int item) {
+      while (true) {
+        Node pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (curr.item < item)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant pred.item < item;
+        {
+          pred = curr;
+          yield;
+          curr = curr.next;
+          yield;
+        }
+        acquire(pred);
+        acquire(curr);
+
+       if (this.validate(pred, curr)
+               invariant pred.item < item;
+               invariant item <= curr.item
+         ) {
+         if (curr.item == item) {
+           release(pred);
+           release(curr);
+           return false;
+         } else {
+           Node node = new Node(item);
+           node.next = curr;
+           pred.next = node;
+           release(pred);
+           release(curr);
+           return true;
+         }
+       } else {
+          release(pred);
+          release(curr);
+          yield;
+       }
+     }
+    }
+
+    requires INT_MIN < item && item < INT_MAX;
+    public bool remove(int item) {
+      while (true) {
+        Node pred = this.head;
+        Node curr = pred.next;
+        yield;
+        while (curr.item < item)
+          invariant isShared(curr);
+          invariant isShared(pred);
+          invariant pred.item < item;
+        {
+          pred = curr;
+          yield;
+          curr = curr.next;
+          yield;
+        }
+        acquire(pred);
+        acquire(curr);
+
+       if (this.validate(pred, curr)
+               invariant pred.item < item;
+               invariant item <= curr.item
+         ) {
+          if (curr.item == item) {
+            pred.next = curr.next;
+            release(pred);
+            release(curr);
+            return true;
+          } else {
+            release(pred);
+            release(curr);
+            return false;
+          }
+        } else {
+          release(pred);
+          release(curr);
+          yield;
+        }
+      }
+    }
+
+     requires INT_MIN < item && item < INT_MAX;
+     public bool contains(int item) {
+       while (true) {
+         Node pred = this.head;
+         Node curr = pred.next;
+         yield;
+         while (curr.item < item)
+           invariant isShared(curr);
+           invariant isShared(pred);
+           invariant pred.item < item;
+         {
+           pred = curr;
+           yield;
+           curr = curr.next;
+           yield;
+         }
+         acquire(pred);
+         acquire(curr);
+       if (this.validate(pred, curr)
+               invariant pred.item < item;
+               invariant item <= curr.item
+         ) {
+           bool b = (curr.item == item);
+           release(pred);
+           release(curr);
+           return b;
+         } else {
+            release(pred);
+            release(curr);
+            yield;
+         }
+       }
+     }
+}

@@ -1,0 +1,19 @@
+
+
+class AtomicInc {
+
+	noABA
+    volatile int n  moves_as isRead() ? N : (newValue == this.n + 1 ? N : E)
+	  yields_as newValue >= this.n;
+
+	ensures this.n == old(this.n) + 1;
+    public void inc() {
+        while (true) {
+            int x = this.n;
+            if (cas(this,n,x,x+1)) {
+                break;
+            }
+            yield;
+        }
+    }
+}

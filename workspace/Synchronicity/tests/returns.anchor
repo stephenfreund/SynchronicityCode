@@ -1,0 +1,12 @@
+
+class Cow {
+
+    public Cow f() {
+       Cow c = new Cow();
+       return c;
+    }
+
+    public Cow f2() {
+      return this;
+    }
+}

@@ -1,0 +1,15 @@
+
+class Cow {
+	Cow y   readonly;
+
+	public void f2() {
+	    Cow this_y := this.y;
+		assert this_y != Cow.null || this_y == Cow.null;
+	}
+
+	public void f() {
+		Cow x;
+		x := this.y;
+	}
+
+}

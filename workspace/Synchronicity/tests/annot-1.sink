@@ -1,0 +1,28 @@
+
+class Cow {
+
+    public void f() {
+       int x = 0;
+       int y = 10;
+       bool z = x < y;
+       if (z) {
+           x = 2;
+       } else {
+           x = 3;
+       }
+    }
+
+    public void f2() {
+       int x = 0;
+       int y = 10;
+       bool z = x < y;
+       while (z) {
+           x = x + 1;
+           z = x < y;
+        }
+        y = 6;
+        assert false;
+    }
+}
+
+///: (24.9): This assertion may not hold.

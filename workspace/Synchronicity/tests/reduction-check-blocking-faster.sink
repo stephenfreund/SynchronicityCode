@@ -1,0 +1,41 @@
+// BAD
+
+class Cow {
+    Cow lock isLocal(this) ? threadlocal : readonly;
+    int c1 isLocal(this) ? threadlocal : whenever;
+
+    public void f(Cow c) {
+        int t;
+        Cow lock := this.lock;
+        synchronized(lock) {
+            t:=this.c1;
+        }
+        t := c.c1; // bad
+    }
+
+    public void f2(Cow c) {
+        int t;
+        Cow lock := this.lock;
+        synchronized(lock) {
+            t:=this.c1;
+        }
+        yield;
+        t := c.c1;
+    }
+
+    public void f3(Cow c) {
+        int t;
+        Cow lock := this.lock;
+        synchronized(lock) {
+            t:=this.c1;
+        }
+        while (true) {
+
+        }
+    }
+
+}
+
+///: (13.9): Cannot have potential null deference in left-mover part.
+/// only one error per method... (13.9): Reduction failure
+///: (32.9): Potentially infinite loop head cannot be in post-commit phase.

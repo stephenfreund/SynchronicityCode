@@ -1,0 +1,96 @@
+// Use -maxTid=1 on command line!!!
+
+
+
+
+
+//#define inHeadToTail(x)  ((this.head <= x < this.tail) || (0 <= x < this.tail < this.head) || (this.tail < this.head <= x < this.elems.length))
+//#define inTailToHead(x)  ((this.tail <= x < this.head) || (0 <= x < this.head <= this.tail) || (this.head <= this.tail <= x < this.elems.length))
+
+
+
+
+
+
+
+
+
+axiom (forall int x, int y :: 0 <= x && x < y ==> x % y == x);
+axiom (forall int x, int y :: y <= x && x < (y+y) ==> x % y == x - y);
+axiom (forall int x :: 0 < x ==> x % x == 0);
+
+
+class Pair {
+    int key moves_as isLocal(this) ? B : readonly;
+    int value moves_as isLocal(this) ? B : readonly;
+    public Pair(int key, int value) {
+        this.key = key; this.value = value;
+    }
+}
+
+class Queue {
+
+  array T = Pair[moves_as (this.elems != null && ((0)<=(this.head)<(this.elems.length)) && ((0)<=(this.tail)<(this.elems.length))) &&
+                         (   (tid == 0 ==> (this.tail < this.head ? ((this.tail)<=(index)<(this.head)) : (((this.tail)<=(index)<(this.elems.length)) || ((0)<=(index)<(this.head)))))
+                          && (tid == 1 ==> (this.head <= this.tail ? ((this.head)<=(index)<(this.tail)) : (((this.head)<=(index)<(this.elems.length)) || ((0)<=(index)<(this.tail)))))) ? B : E ]
+
+    [T] elems moves_as isLocal(this) ? B : readonly;
+
+    volatile int tail
+      moves_as isRead() ? tid == 0 ? B : N
+	                    : tid == 0 && (this.tail < this.head ? ((this.tail)<=(newValue)<(this.head)) : (((this.tail)<=(newValue)<(this.elems.length)) || ((0)<=(newValue)<(this.head)))) ? N : E
+      yields_as (this.elems != null && ((0)<=(this.head)<(this.elems.length)) && ((0)<=(this.tail)<(this.elems.length))) ==> (this.tail < this.head ? ((this.tail)<=(newValue)<(this.head)) : (((this.tail)<=(newValue)<(this.elems.length)) || ((0)<=(newValue)<(this.head))));
+
+    volatile int head
+      moves_as isRead() ? tid == 1 ? B : N
+    	                : tid == 1 && ((this.head <= this.tail ? ((this.head)<=(newValue)<(this.tail)) : (((this.head)<=(newValue)<(this.elems.length)) || ((0)<=(newValue)<(this.tail)))) || (newValue)==this.tail) ? N : E
+      yields_as (this.elems != null && ((0)<=(this.head)<(this.elems.length)) && ((0)<=(this.tail)<(this.elems.length))) ==> ((this.head <= this.tail ? ((this.head)<=(newValue)<(this.tail)) : (((this.head)<=(newValue)<(this.elems.length)) || ((0)<=(newValue)<(this.tail)))) || (newValue)==this.tail);
+
+    ghost Seq<Pair> spec;
+
+    invariant (this.elems != null && ((0)<=(this.head)<(this.elems.length)) && ((0)<=(this.tail)<(this.elems.length)));
+    invariant this.spec.length == (this.elems.length + this.tail - this.head) % this.elems.length;
+
+    invariant (forall int i :: // { this.elems[i] }
+                      (this.head <= this.tail ? ((this.head)<=(i)<(this.tail)) : (((this.head)<=(i)<(this.elems.length)) || ((0)<=(i)<(this.tail))))  ==> this.elems[i] == this.spec[(this.elems.length + i - this.head)%this.elems.length]);
+
+
+
+    ensures this.spec == SeqEmpty<Pair>();
+    public Vector() {
+      // spec, head, tail all zero/empty initialized
+      this.elems = new [T](512);
+    }
+
+    requires tid == 0;
+    modifies this;
+    ensures !$result && this.spec == old(this.spec) || $result && (this.spec == old(this.spec) ++ [x]);
+    public bool enqueue(Pair x) {
+        if ((this.tail + 1) % this.elems.length != this.head) {
+            yield;
+            this.elems[this.tail] = x;
+            this.spec = this.spec ++ [x];
+            this.tail = (this.tail + 1) % this.elems.length;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    requires tid == 1;
+    modifies this;
+    ensures $result == null && this.spec == old(this.spec)
+            || old(this.spec) == [$result] ++ this.spec;
+    public Pair dequeue() {
+        if (this.head != this.tail) {
+            yield;
+            Pair result = this.elems[this.head];
+            this.spec = this.spec[1..SeqLen(this.spec)];
+            this.head = (this.head + 1) % this.elems.length;
+            return result;
+        } else {
+            return null;
+        }
+    }
+}
+

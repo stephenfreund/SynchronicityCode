@@ -1,0 +1,130 @@
+
+class Lock { }
+
+
+class Node {
+    int item moves_as isLocal(this) ? threadlocal : readonly;
+    Node next moves_as isLocal(this) ? threadlocal : this.item < INT_MAX ? guarded_by this.mutex : readonly;
+    Lock mutex moves_as isLocal(this) ? threadlocal : readonly;
+
+    invariant this.next != null ==> this.mutex == this.next.mutex;
+    invariant this.mutex != null;
+
+    // INT_MIN .. INT_MAX
+    invariant INT_MIN <= this.item && this.item <= INT_MAX;
+
+    // the next is bigger.  if no next, then we have INT_MAX
+    invariant this.next != null ==> this.item < this.next.item;
+    invariant this.next == null ==> this.item == INT_MAX;
+}
+
+class List {
+
+
+    Node head moves_as isLocal(this) ? threadlocal : readonly;
+
+    Lock mutex moves_as isLocal(this) ? threadlocal : readonly;
+    invariant this.mutex != null;
+
+    // dummy head with INT_MIN.
+    invariant this.head != null && this.head.item == INT_MIN;
+    invariant this.head.mutex == this.mutex;
+}
+
+
+class HashSet {
+
+    array LOCK = Lock[moves_as isLocal(athis) ? B : readonly]
+    array T = List[moves_as isLocal(athis) ? B
+
+                                  : guarded_by this.mutexs[index % this.mutexs.length]]
+
+    [LOCK] mutexs  moves_as isLocal(this) ? threadlocal : readonly;
+    volatile [T] table     moves_as isLocal(this) ? threadlocal :
+        isRead ? (this.mutexs.length > 0 && !(forall int i :: 0 <= i && i < this.mutexs.length ==> !holds(this.mutexs[i])) ? B : N)
+               : (this.mutexs.length > 0 && (forall int i :: 0 <= i && i < this.mutexs.length ==> holds(this.mutexs[i])) ? N : E);
+    volatile int setSize  moves_as isLocal(this) ? threadlocal : whenever;
+
+    invariant this.mutexs != null;
+    invariant this.mutexs.length > 0;
+    invariant (forall int i ::  0 <= i && i < this.mutexs.length ==> this.mutexs[i] != null);
+    invariant (forall int i, int j :: 0 <= i && i < this.mutexs.length &&
+                                      0 <= j && j < this.mutexs.length &&
+                                      this.mutexs[i] == this.mutexs[j]
+                                    ==> i == j);
+
+    invariant this.table != null;
+    invariant this.table.length > 0;
+
+    invariant this.table.length % this.mutexs.length == 0 ;
+
+    invariant (forall int i :: 0 <= i && i < this.table.length ==> this.table[i] != null);
+    invariant (forall int i :: 0 <= i && i < this.table.length ==> this.table[i].mutex == this.mutexs[i% this.mutexs.length]);
+
+    public void f0(bool b1, bool b2, bool b3) {
+      yield;
+    }
+
+    public void f1(bool b1, bool b2, bool b3) {
+       if (b1) {
+         yield;
+       } else {
+         yield;
+       }
+    }
+
+    public void f2(bool b1, bool b2, bool b3) {
+       if (b1) {
+         yield;
+       } else {
+         yield;
+       }
+       if (b2) {
+         yield;
+       } else {
+         yield;
+       }
+    }
+
+    public void f7(bool b1, bool b2, bool b3) {
+       if (b1) {
+         yield;
+       } else {
+         yield;
+       }
+       if (b2) {
+         yield;
+       } else {
+         yield;
+       }
+       if (b3) {
+         yield;
+       } else {
+         yield;
+       }
+
+    }
+
+    public void f8(bool b1, bool b2, bool b3, bool b4) {
+       if (b1) {
+         yield;
+       } else {
+         yield;
+       }
+       if (b2) {
+         yield;
+       } else {
+         yield;
+       }
+       if (b3) {
+         yield;
+       } else {
+         yield;
+       }
+       if (b4) {
+         yield;
+       } else {
+         yield;
+       }
+    }
+}
